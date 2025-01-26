@@ -1,108 +1,100 @@
 import pandas as pd
-import PySimpleGUI as sg
+import PySimpleGUI
 from datetime import datetime
-from openpyxl.drawing.image import Image
-from openpyxl.drawing.spreadsheet_drawing import AbsoluteAnchor
-from openpyxl.drawing.xdr import XDRPoint2D, XDRPositiveSize2D
-from openpyxl.utils.units import pixels_to_EMU
 from openpyxl import load_workbook
 from openpyxl.styles import Font
 
 
+def collect_UI_input():
+    form, layout = create_layout()
+    window = form.Layout(layout)
+    button, values = window.Read()
+
+    try:
+        start_date = pd.to_datetime(values[2]) if values[2] else pd.NaT
+        end_date = pd.to_datetime(values[3]) if values[3] else pd.NaT
+    except ValueError:
+        raise ValueError("Invalid date format. Please enter a valid date (e.g. MM/DD/YYYY, YYYY-MM-DD)")
+
+    return create_materials(
+        values[0],     # Sheet Name
+        values[1],     # Project ID
+        start_date,    # Start Date
+        end_date,      # End Date
+        values[4]      # Taxable checkbox
+    )
+
+
 # Function to create the layout of the UI
 def create_layout():
-    sg.ChangeLookAndFeel('GreenTan')
-    form = sg.FlexForm('Audit', default_element_size=(40, 1))
+    PySimpleGUI.ChangeLookAndFeel('GreenTan')
+    form = PySimpleGUI.FlexForm('Audit', default_element_size=(40, 1))
     # Open the Excel file
-    excel_file = pd.ExcelFile('../../Dump Trucking BookRecords - TEST.xlsx')
+    excel_file = pd.ExcelFile('../Dump Trucking BookRecords - TEST.xlsx')
     # Get all sheet names
     sheet_names = [name for name in excel_file.sheet_names if 'Dump Trucking' in name]
     # Check if current year exists in sheet names, and if so, set it as default
     current_year = str(datetime.now().year)
     default_sheet = next((name for name in sheet_names if current_year in name), None)
     layout = [
-        [sg.Text('Generate Audit Daily Load Tickets!', size=(30, 1), font=("Helvetica", 25))],
-        [sg.Text('"Dump Trucking" Year Sheet')],
-        [sg.Combo(sheet_names, size=(30, 1), default_value=default_sheet)],
-        [sg.Text('Project ID')],
-        [sg.InputText()],
-        [sg.Text('Start Date')],
-        [sg.InputText()],
-        [sg.Text('End Date')],
-        [sg.InputText()],
-        [sg.Text('_' * 80)],
-        [sg.Submit(), sg.Cancel()]
+        [PySimpleGUI.Text('Generate Audit Daily Load Tickets!', size=(30, 1), font=("Helvetica", 25))],
+        [PySimpleGUI.Text('"Dump Trucking" Year Sheet')],
+        [PySimpleGUI.Combo(sheet_names, size=(30, 1), default_value=default_sheet)],
+        [PySimpleGUI.Text('Project ID')],
+        [PySimpleGUI.InputText()],
+        [PySimpleGUI.Text('Start Date')],
+        [PySimpleGUI.InputText()],
+        [PySimpleGUI.Text('End Date')],
+        [PySimpleGUI.InputText()],
+        [PySimpleGUI.Checkbox('Taxable')],
+        [PySimpleGUI.Text('_' * 80)],
+        [PySimpleGUI.Submit(), PySimpleGUI.Cancel()]
     ]
     return form, layout
 
 
-# Function to configure the Logo image and the Signature image for the driver log
-def create_images():
-    p2e = pixels_to_EMU
-    logoImage = Image('img.jpg')
-    signatureImage = Image('sig.jpg')
+# Function to create new materials like workbooks, the data table, and template sheets
+def create_materials(sheet_name, project_id, start_date, end_date, taxable):
+    driver_log_wb = load_workbook(filename='MASTER_DumpTruck_TimeSheet_ProspectLLC_2025_FINAL.xlsx')
+    driver_log_template = driver_log_wb["2024 Version"]
+    driver_log_template['B2'].font = Font(name='Calibri', color='FFFFFF', size=18, b=True)
 
-    logoImage_X_Coordinate = 755
-    logoImage_Y_Coordinate = 11
-    logoImage_Width = 98
-    logoImage_Height = 101
-    logoImage.anchor = AbsoluteAnchor(pos=XDRPoint2D(p2e(logoImage_X_Coordinate), p2e(logoImage_Y_Coordinate)),
-                                      ext=XDRPositiveSize2D(p2e(logoImage_Width), p2e(logoImage_Height)))
+    bold_cells = "G1 K1 A6 F6 N6 A8 B8 E8 H8 J8 K8 L8 N8 P8 A16 A17 A18 A20 A21 F16 J16 J17 J18 J20 J21".split()
+    for cell in bold_cells:
+        driver_log_template[cell].font = Font(name='Calibri', color='FFFFFF', size=11.5, b=True)
 
-    signatureImage_X_Coordinate = 755
-    signatureImage_Y_Coordinate = 477
-    signatureImage_Width = 104
-    signatureImage_Height = 40
-    signatureImage.anchor = AbsoluteAnchor(pos=XDRPoint2D(p2e(signatureImage_X_Coordinate), p2e(signatureImage_Y_Coordinate)),
-                                           ext=XDRPositiveSize2D(p2e(signatureImage_Width), p2e(signatureImage_Height)))
+    df = pd.read_excel('../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
+    # Filter data to only include data for project ID that matches the date range
+    data = df[df["PROJECT ID"] == project_id]
+    # Apply date filters if they are defined
+    if pd.notna(start_date):
+        data = data[data["DATE"] >= start_date]
+    if pd.notna(end_date):
+        data = data[data["DATE"] <= end_date]
 
-    return logoImage, signatureImage
+    validate_data(data, project_id)
 
+    invoice_template = 'InvoiceASAP_Template_2025_NonTaxable.xlsx' if not taxable else 'InvoiceASAP_Template_2025.xlsx'
+    invoice_wb = load_workbook(filename=invoice_template)
+    invoice_wb["Blank_Template"].title = "Invoice"
+    invoice_sheet = invoice_wb["Invoice"]
+    invoice_sheet["D5"] = project_id
+    invoice_sheet["G2"] = f"Start: {data['DATE'].min().strftime('%m/%d/%y')}"
+    invoice_sheet["H2"] = f"End: {data['DATE'].max().strftime('%m/%d/%y')}"
 
-# Function to format the Driver Log Excel sheet
-def create_workbook():
-    wb = load_workbook(filename='../../Template.xlsx')
-    source = wb["Sheet1"]
-    source['B2'].font = Font(color='FFFFFF', size=18, b=True)
-    source['B5'].font = Font(color='FFFFFF', size=11.5, b=True)
-    source['E5'].font = Font(color='FFFFFF', size=11.5, b=True)
-    source['B7'].font = Font(color='FFFFFF', size=11.5, b=True)
-    source['D7'].font = Font(color='FFFFFF', size=11.5, b=True)
-    source['H7'].font = Font(color='FFFFFF', size=11.5, b=True)
-    source['O7'].font = Font(color='FFFFFF', size=11.5, b=True)
-    source['B17'].font = Font(color='FFFFFF', size=11.5, b=True)
-    source['I19'].font = Font(color='FFFFFF', size=11.5, b=True)
+    # Delete template sheet from final workbook file
+    del driver_log_wb['2024 Version']
 
-    ws = wb.create_sheet('Data')
-    ws.append(["Date", "Truck ID", "Product", "QTY"])
-    ws.column_dimensions['A'].width = 13
-    ws.column_dimensions['B'].width = 20
-    ws.column_dimensions['C'].width = 20
-    ws.column_dimensions['D'].width = 7
-
-    return wb, ws, source
+    return project_id, driver_log_wb, invoice_wb, invoice_sheet, driver_log_template, data, taxable
 
 
-def validate_data(data):
+# Function to check if BookRecords data exists and contains the correct columns
+def validate_data(data, project_id):
     if data.empty:
-        raise ValueError("No data found for the provided project ID.")
+        raise ValueError("No data found for project ID " + project_id)
 
-    required_columns = ["PROJECT ID", "DATE", "TRUCK ID#", "PRODUCT", "LOAD QTY \n", "CUSTOMER", "HAULING FROM", "HAULING TO"]
+    required_columns = ["PROJECT ID", "DATE", "TRUCK ID#", "PRODUCT", "LOAD QTY \n",
+                        "CUSTOMER", "HAULING FROM", "HAULING TO"]
     missing_columns = [col for col in required_columns if col not in data.columns]
     if missing_columns:
         raise ValueError(f"Required data columns are missing: {', '.join(missing_columns)}")
-
-
-def populate_data_sheet(ws, row_count, row):
-    ws["A" + str(row_count)] = row["DATE"].date()
-    ws["B" + str(row_count)] = row["TRUCK ID#"]
-    ws["C" + str(row_count)] = row["PRODUCT"]
-    ws["D" + str(row_count)] = row["LOAD QTY \n"]
-
-
-def populate_driver_log_sheet(target, load_row_count, row):
-    target['E' + str(load_row_count + 6)] = row["PROJECT ID"]
-    target['B' + str(load_row_count + 8)] = row["HAULING FROM"]
-    target['D' + str(load_row_count + 8)] = row["HAULING TO"]
-    target['H' + str(load_row_count + 8)] = row["PRODUCT"]
-    target['L' + str(load_row_count + 8)] = row["LOAD QTY \n"]
