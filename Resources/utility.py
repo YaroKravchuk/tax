@@ -30,7 +30,7 @@ def create_layout():
     PySimpleGUI.ChangeLookAndFeel('GreenTan')
     form = PySimpleGUI.FlexForm('Audit', default_element_size=(40, 1))
     # Open the Excel file
-    excel_file = pd.ExcelFile('../Dump Trucking BookRecords - TEST.xlsx')
+    excel_file = pd.ExcelFile('../../Dump Trucking BookRecords - TEST.xlsx')
     # Get all sheet names
     sheet_names = [name for name in excel_file.sheet_names if 'Dump Trucking' in name]
     # Check if current year exists in sheet names, and if so, set it as default
@@ -63,7 +63,7 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable):
     for cell in bold_cells:
         driver_log_template[cell].font = Font(name='Calibri', color='FFFFFF', size=11.5, b=True)
 
-    df = pd.read_excel('../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
+    df = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
     # Filter data to only include data for project ID that matches the date range
     data = df[df["PROJECT ID"] == project_id]
     # Apply date filters if they are defined
