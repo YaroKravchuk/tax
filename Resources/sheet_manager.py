@@ -70,8 +70,10 @@ class SheetManager:
         self.driver_log_sheet['B' + driver_log_row] = row["HAULING TO"]
         self.driver_log_sheet['E' + driver_log_row] = row["PRODUCT"]
         self.driver_log_sheet['H' + driver_log_row] = row["LOAD QTY \n"]
-        self.driver_log_sheet['K' + driver_log_row] = row["DUMP FEE RATE"]
-        self.driver_log_sheet['J' + driver_log_row] = row["MATERIAL COST"]
+        if pd.notna(row["DUMP FEE RATE"]):
+            self.driver_log_sheet['K' + driver_log_row] = "X"
+        if pd.notna(row["MATERIAL COST"]):
+            self.driver_log_sheet['J' + driver_log_row] = "️X"
         self.driver_log_sheet['L' + driver_log_row] = row["TIME IN"]
         self.driver_log_sheet['N' + driver_log_row] = row["TIME OUT"]
         self.driver_log_sheet['P' + driver_log_row] = row["STAND-BY TIME"]
