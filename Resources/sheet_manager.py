@@ -94,6 +94,10 @@ class SheetManager:
 
     # Function to input a single row of invoice data
     def populate_invoice_sheet_row(self, row):
+
+        if self.row_count + 8 > 67:
+            raise ValueError("There is too much data to fit on the invoice! \n\nDecrease time range...")
+
         invoice_row = str(self.row_count + 8)
         self.set_cell_value("D4", row.get("CUSTOMER"))
         self.set_cell_value(f"A{invoice_row}", row.get("DATE").date() if pd.notna(row.get("DATE")) else None)
@@ -148,6 +152,9 @@ class SheetManager:
         if not pd.notna(unit) or not pd.notna(rate):
             return
 
+        if self.row_count + 8 > 67:
+            raise ValueError("There is too much data to fit on the invoice! \n\nDecrease time range...")
+
         invoice_row = str(self.row_count + 8)
 
         self.set_cell_value(f"A{invoice_row}", row.get("DATE").date() if pd.notna(row.get("DATE")) else None)
@@ -164,8 +171,12 @@ class SheetManager:
         self.row_count = self.row_count + 1
 
     def set_cell_value(self, cell_reference, value):
-        if pd.notna(value):
-            self.invoice_sheet[cell_reference] = value
+        try:
+            if pd.notna(value):
+                self.invoice_sheet[cell_reference] = value
+        except Exception as e:
+            print(f"Error processing subcategory row {self.row_count + 8}: {str(e)}")
+            print(f"cell_reference: {cell_reference}, value: {value}")
 
     def set_cell_rich_text(self, cell_reference, service_type, product):
         if pd.notna(service_type) and pd.notna(product):
