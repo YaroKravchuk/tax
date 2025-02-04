@@ -73,7 +73,7 @@ class SheetManager:
         if pd.notna(row["DUMP FEE RATE"]):
             self.driver_log_sheet['K' + driver_log_row] = "X"
         if pd.notna(row["MATERIAL COST"]):
-            self.driver_log_sheet['J' + driver_log_row] = "️X"
+            self.driver_log_sheet['J' + driver_log_row] = "X"
         self.driver_log_sheet['L' + driver_log_row] = row["TIME IN"]
         self.driver_log_sheet['N' + driver_log_row] = row["TIME OUT"]
         self.driver_log_sheet['P' + driver_log_row] = row["STAND-BY TIME"]
@@ -108,7 +108,7 @@ class SheetManager:
         self.set_cell_value(f"E{invoice_row}", row.get("LOAD QTY \n"))
         self.set_cell_value(f"F{invoice_row}", row.get("RATE PER LOAD"))
 
-        if self.taxable:
+        if self.taxable and pd.notna(row.get("RATE PER LOAD")):
             self.invoice_sheet["G" + invoice_row] = "X"
 
         if pd.notna(row.get("LOAD QTY \n")) and pd.notna(row.get("RATE PER LOAD")):
@@ -168,6 +168,10 @@ class SheetManager:
 
         self.set_cell_value(f"E{invoice_row}", unit)
         self.set_cell_value(f"F{invoice_row}", rate)
+
+        if self.taxable and is_hours_unit:
+            self.invoice_sheet["G" + invoice_row] = "X"
+        
         self.set_cell_value(f"H{invoice_row}", f"=E{invoice_row}*F{invoice_row}")
 
         self.row_count = self.row_count + 1
