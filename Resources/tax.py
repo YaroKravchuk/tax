@@ -25,7 +25,7 @@ except Exception as e:
     tb = traceback.extract_tb(sys.exc_info()[2])
     for frame in reversed(tb):
         filename = os.path.basename(frame.filename)
-        if filename in ['utility.py', 'tax.py']:
+        if filename in ['utility.py', 'tax.py', 'sheet_manager.py']:
             PySimpleGUI.PopupError(f"Error: {str(e)}\n\n\nFailed at this spot in the code: "
                                    f"\nFile: {filename} \nLine: {frame.lineno}")
             break

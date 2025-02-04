@@ -94,23 +94,24 @@ class SheetManager:
 
     # Function to input a single row of invoice data
     def populate_invoice_sheet_row(self, row):
-        self.invoice_sheet["D4"] = row["CUSTOMER"]
         invoice_row = str(self.row_count + 8)
-        self.invoice_sheet["A" + invoice_row] = row["DATE"].date()
-        self.invoice_sheet["B" + invoice_row] = row["TRUCK ID#"]
-        self.invoice_sheet["C" + invoice_row] = CellRichText(
-            TextBlock(InlineFont(rFont='Tahoma', color=BLUE, sz=9, b=True), f"{' ' * 20}{row['SERVICE TYPE']}:"),
-            TextBlock(InlineFont(rFont='Tahoma', color=BLUE, sz=9), f" {row['PRODUCT']}")
-        )
-        self.invoice_sheet["E" + invoice_row] = row["LOAD QTY \n"]
-        self.invoice_sheet["F" + invoice_row] = row["RATE PER LOAD"]
+        self.set_cell_value("D4", row.get("CUSTOMER"))
+        self.set_cell_value(f"A{invoice_row}", row.get("DATE").date() if pd.notna(row.get("DATE")) else None)
+        self.set_cell_value(f"B{invoice_row}", row.get("TRUCK ID#"))
+        self.set_cell_rich_text(f"C{invoice_row}", row.get("SERVICE TYPE"), row.get("PRODUCT"))
+        self.set_cell_value(f"E{invoice_row}", row.get("LOAD QTY \n"))
+        self.set_cell_value(f"F{invoice_row}", row.get("RATE PER LOAD"))
+
         if self.taxable:
             self.invoice_sheet["G" + invoice_row] = "X"
-        self.invoice_sheet["H" + invoice_row] = "=E" + invoice_row + "*F" + invoice_row
+
+        if pd.notna(row.get("LOAD QTY \n")) and pd.notna(row.get("RATE PER LOAD")):
+            self.set_cell_value(f"H{invoice_row}", f"=E{invoice_row}*F{invoice_row}")
+
         self.row_count = self.row_count + 1
 
         offset = 27
-        if pd.notna(row["STAND-BY TIME"]):
+        if pd.notna(row.get("STAND-BY TIME")) and pd.notna(row.get("STAND-BY RATE")):
             self.populate_invoice_sheet_row_subcategory(
                 row,
                 f"{' ' * offset}↳ Truck Standby Hours",
@@ -144,17 +145,36 @@ class SheetManager:
             )
 
     def populate_invoice_sheet_row_subcategory(self, row, description, is_hours_unit, unit, rate):
+        if not pd.notna(unit) or not pd.notna(rate):
+            return
+
         invoice_row = str(self.row_count + 8)
-        self.invoice_sheet["A" + invoice_row] = row["DATE"].date()
-        self.invoice_sheet["B" + invoice_row] = row["TRUCK ID#"]
-        self.invoice_sheet["C" + invoice_row] = description.ljust(30)
+
+        self.set_cell_value(f"A{invoice_row}", row.get("DATE").date() if pd.notna(row.get("DATE")) else None)
+        self.set_cell_value(f"B{invoice_row}", row.get("TRUCK ID#"))
+        self.set_cell_value(f"C{invoice_row}", description.ljust(30))
+
         if is_hours_unit:
-            self.invoice_sheet["E" + invoice_row].number_format = '0.00'
-        self.invoice_sheet["E" + invoice_row] = unit
-        self.invoice_sheet["F" + invoice_row] = rate
-        self.invoice_sheet["H" + invoice_row] = "=E" + invoice_row + "*F" + invoice_row
+            self.invoice_sheet[f"E{invoice_row}"].number_format = '0.00'
+
+        self.set_cell_value(f"E{invoice_row}", unit)
+        self.set_cell_value(f"F{invoice_row}", rate)
+        self.set_cell_value(f"H{invoice_row}", f"=E{invoice_row}*F{invoice_row}")
 
         self.row_count = self.row_count + 1
+
+    def set_cell_value(self, cell_reference, value):
+        if pd.notna(value):
+            self.invoice_sheet[cell_reference] = value
+
+    def set_cell_rich_text(self, cell_reference, service_type, product):
+        if pd.notna(service_type) and pd.notna(product):
+            self.invoice_sheet[cell_reference] = CellRichText(
+                TextBlock(InlineFont(rFont='Tahoma', color=BLUE, sz=9, b=True),
+                          f"{' ' * 20}{service_type}:"),
+                TextBlock(InlineFont(rFont='Tahoma', color=BLUE, sz=9),
+                          f" {product}")
+            )
 
     # Function to configure the Logo image and the Signature image for the driver log
     def add_images_to_driver_log(self):
