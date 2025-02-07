@@ -5,26 +5,6 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font
 
 
-def collect_UI_input():
-    form, layout = create_layout()
-    window = form.Layout(layout)
-    button, values = window.Read()
-
-    try:
-        start_date = pd.to_datetime(values[2]) if values[2] else pd.NaT
-        end_date = pd.to_datetime(values[3]) if values[3] else pd.NaT
-    except ValueError:
-        raise ValueError("Invalid date format. Please enter a valid date (e.g. MM/DD/YYYY, YYYY-MM-DD)")
-
-    return create_materials(
-        values[0],     # Sheet Name
-        values[1],     # Project ID
-        start_date,    # Start Date
-        end_date,      # End Date
-        values[4]      # Taxable checkbox
-    )
-
-
 # Function to create the layout of the UI
 def create_layout():
     PySimpleGUI.ChangeLookAndFeel('GreenTan')
@@ -47,14 +27,38 @@ def create_layout():
         [PySimpleGUI.Text('End Date')],
         [PySimpleGUI.InputText()],
         [PySimpleGUI.Checkbox('Taxable')],
+        [PySimpleGUI.Checkbox('Include Driver Logs', default=True)],
+        [PySimpleGUI.Checkbox('Include Invoice', default=True)],
         [PySimpleGUI.Text('_' * 80)],
         [PySimpleGUI.Submit(), PySimpleGUI.Cancel()]
     ]
     return form, layout
 
 
+def collect_UI_input():
+    form, layout = create_layout()
+    window = form.Layout(layout)
+    button, values = window.Read()
+
+    try:
+        start_date = pd.to_datetime(values[2]) if values[2] else pd.NaT
+        end_date = pd.to_datetime(values[3]) if values[3] else pd.NaT
+    except ValueError:
+        raise ValueError("Invalid date format. Please enter a valid date (e.g. MM/DD/YYYY, YYYY-MM-DD)")
+
+    return create_materials(
+        values[0],     # Sheet Name
+        values[1],     # Project ID
+        start_date,    # Start Date
+        end_date,      # End Date
+        values[4],     # Taxable checkbox
+        values[5],     # Driver Log checkbox
+        values[6]      # Invoice checkbox
+    )
+
+
 # Function to create new materials like workbooks, the data table, and template sheets
-def create_materials(sheet_name, project_id, start_date, end_date, taxable):
+def create_materials(sheet_name, project_id, start_date, end_date, taxable, should_create_driver_logs, should_create_invoice):
     driver_log_wb = load_workbook(filename='MASTER_DumpTruck_TimeSheet_ProspectLLC_2025_FINAL.xlsx')
     driver_log_template = driver_log_wb["2024 Version"]
     driver_log_template['B2'].font = Font(name='Calibri', color='FFFFFF', size=18, b=True)
@@ -78,14 +82,18 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable):
     invoice_wb = load_workbook(filename=invoice_template)
     invoice_wb["Blank_Template"].title = "Invoice"
     invoice_sheet = invoice_wb["Invoice"]
+    min_date = data['DATE'].min()
+    max_date = data['DATE'].max()
     invoice_sheet["D5"] = project_id
-    invoice_sheet["G2"] = f"Start: {data['DATE'].min().strftime('%m/%d/%y')}"
-    invoice_sheet["H2"] = f"End: {data['DATE'].max().strftime('%m/%d/%y')}"
+    invoice_sheet["G2"] = f"Start: {min_date.strftime('%m/%d/%y')}"
+    invoice_sheet["H2"] = f"End: {max_date.strftime('%m/%d/%y')}"
 
     # Delete template sheet from final workbook file
     del driver_log_wb['2024 Version']
 
-    return project_id, driver_log_wb, invoice_wb, invoice_sheet, driver_log_template, data, taxable
+    return (project_id, driver_log_wb, invoice_wb, invoice_sheet, driver_log_template, data, taxable,
+            should_create_driver_logs, should_create_invoice, min_date.strftime('%b %d').upper(),
+            max_date.strftime('%b %d').upper())
 
 
 # Function to check if BookRecords data exists and contains the correct columns

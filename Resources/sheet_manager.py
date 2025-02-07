@@ -98,7 +98,9 @@ class SheetManager:
     def populate_invoice_sheet_row(self, row):
 
         if self.row_count + 8 > 67:
-            raise ValueError("There is too much data to fit on the invoice! \n\nDecrease time range...")
+            # raise ValueError("There is too much data to fit on the invoice! \n\nDecrease time range...")
+            self.row_count = 999
+            return
 
         invoice_row = str(self.row_count + 8)
         self.set_cell_value("D4", row.get("CUSTOMER"))
@@ -155,7 +157,9 @@ class SheetManager:
             return
 
         if self.row_count + 8 > 67:
-            raise ValueError("There is too much data to fit on the invoice! \n\nDecrease time range...")
+            # raise ValueError("There is too much data to fit on the invoice! \n\nDecrease time range...")
+            self.row_count = 999
+            return
 
         invoice_row = str(self.row_count + 8)
 
