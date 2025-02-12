@@ -23,11 +23,11 @@ try:
     if should_create_invoice:
         sheet_manager.merge_date_cells()
         sheet_manager.merge_truck_cells()
-        invoice_wb.save(f'../     INVOICE     __   {project_id}   __ {min_date} - {max_date}.xlsx')
+        invoice_wb.save(f'../INVOICE__{project_id}__{min_date} - {max_date}.xlsx')
 
     # Save driver logs sheet
     if should_create_driver_logs:
-        driver_log_wb.save(f'../DRIVER LOGS __   {project_id}   __ {min_date} - {max_date}.xlsx')
+        driver_log_wb.save(f'../DRIVER LOGS__{project_id}__{min_date} - {max_date}.xlsx')
 
     if sheet_manager.row_count == 999:
         raise ValueError('There is too much data to fit on the invoice! '
