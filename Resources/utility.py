@@ -71,7 +71,7 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
 
     # DEBUG: Print all unique project IDs with their repr() to see hidden characters
     print("\n=== DEBUG: All unique PROJECT IDs in dataframe ===")
-    unique_ids = df["PROJECT ID"].unique()
+    unique_ids = sorted(df["PROJECT ID"].unique())
     for uid in unique_ids:
         print(f"ID: '{uid}' | repr: {repr(uid)} | type: {type(uid)}")
 
