@@ -67,7 +67,21 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     for cell in bold_cells:
         driver_log_template[cell].font = Font(name='Calibri', color='FFFFFF', size=11.5, b=True)
 
+    df_raw = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name, header=None)
+    print(f"Raw shape: {df_raw.shape}")
+    print(f"Total rows in raw data: {len(df_raw)}")
+
     df = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
+    print(f"Parsed shape: {df.shape}")
+    print(f"Total rows after parsing: {len(df)}")
+
+    # Check for empty rows in the DATE column
+    print(f"\nNull dates: {df['DATE'].isna().sum()}")
+    print(f"Non-null dates: {df['DATE'].notna().sum()}")
+
+    # See what the actual values look like in those NaT rows
+    print("\nRows around the NaT values:")
+    print(df.iloc[4110:4125][["DATE", "PROJECT ID"]])
 
     df["DATE"] = pd.to_datetime(df["DATE"])
 
