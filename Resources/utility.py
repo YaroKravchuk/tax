@@ -71,7 +71,11 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
 
     df["DATE"] = pd.to_datetime(df["DATE"])
 
+    pd.set_option('display.max_rows', None)  # Show all rows
+
     print(df["DATE"])
+
+    pd.set_option('display.max_rows', 60)
 
     # DEBUG: Print all unique project IDs with their repr() to see hidden characters
     # print("\n=== DEBUG: All unique PROJECT IDs in dataframe ===")
