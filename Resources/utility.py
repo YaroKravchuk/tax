@@ -68,8 +68,23 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
         driver_log_template[cell].font = Font(name='Calibri', color='FFFFFF', size=11.5, b=True)
 
     df = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
+
+    # DEBUG: Print all unique project IDs with their repr() to see hidden characters
+    print("\n=== DEBUG: All unique PROJECT IDs in dataframe ===")
+    unique_ids = df["PROJECT ID"].unique()
+    for uid in unique_ids:
+        print(f"ID: '{uid}' | repr: {repr(uid)} | type: {type(uid)}")
+
+    print(f"\n=== DEBUG: Input project_id ===")
+    print(f"ID: '{project_id}' | repr: {repr(project_id)} | type: {type(project_id)}")
+
+    # Optional: Strip whitespace from both
+    df["PROJECT ID"] = df["PROJECT ID"].astype(str).str.strip()
+    project_id = str(project_id).strip()
+
     # Filter data to only include data for project ID that matches the date range
     data = df[df["PROJECT ID"] == project_id]
+    print(f"\n=== DEBUG: Rows matched: {len(data)} ===")
     print(data)
     # Apply date filters if they are defined
     if pd.notna(start_date):
@@ -77,6 +92,8 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     if pd.notna(end_date):
         data = data[data["DATE"] <= end_date]
 
+    print("now data after date filter: ")
+    print(data)
     validate_data(data, project_id)
 
     invoice_template = 'InvoiceASAP_Template_2025_NonTaxable.xlsx' if not taxable else 'InvoiceASAP_Template_2025.xlsx'
