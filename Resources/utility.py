@@ -71,14 +71,16 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
 
     df["DATE"] = pd.to_datetime(df["DATE"])
 
-    # DEBUG: Print all unique project IDs with their repr() to see hidden characters
-    print("\n=== DEBUG: All unique PROJECT IDs in dataframe ===")
-    unique_ids = sorted(df["PROJECT ID"].unique(), key=str)
-    for uid in unique_ids:
-        print(f"ID: '{uid}' | repr: {repr(uid)} | type: {type(uid)}")
+    print(df["DATE"])
 
-    print(f"\n=== DEBUG: Input project_id ===")
-    print(f"ID: '{project_id}' | repr: {repr(project_id)} | type: {type(project_id)}")
+    # DEBUG: Print all unique project IDs with their repr() to see hidden characters
+    # print("\n=== DEBUG: All unique PROJECT IDs in dataframe ===")
+    # unique_ids = sorted(df["PROJECT ID"].unique(), key=str)
+    # for uid in unique_ids:
+    #     print(f"ID: '{uid}' | repr: {repr(uid)} | type: {type(uid)}")
+    #
+    # print(f"\n=== DEBUG: Input project_id ===")
+    # print(f"ID: '{project_id}' | repr: {repr(project_id)} | type: {type(project_id)}")
 
     # Optional: Strip whitespace from both
     df["PROJECT ID"] = df["PROJECT ID"].astype(str).str.strip()
