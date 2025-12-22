@@ -88,6 +88,7 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     data = df[df["PROJECT ID"] == project_id]
     print(f"\n=== DEBUG: Rows matched: {len(data)} ===")
     print(data)
+    print(data["DATE"])
     # Apply date filters if they are defined
     if pd.notna(start_date):
         data = data[data["DATE"] >= start_date]
