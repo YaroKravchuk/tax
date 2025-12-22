@@ -69,6 +69,8 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
 
     df = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
 
+    df["DATE"] = pd.to_datetime(df["DATE"])
+
     # DEBUG: Print all unique project IDs with their repr() to see hidden characters
     print("\n=== DEBUG: All unique PROJECT IDs in dataframe ===")
     unique_ids = sorted(df["PROJECT ID"].unique(), key=str)
