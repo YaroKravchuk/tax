@@ -70,6 +70,7 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     df = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
     # Filter data to only include data for project ID that matches the date range
     data = df[df["PROJECT ID"] == project_id]
+    print(data)
     # Apply date filters if they are defined
     if pd.notna(start_date):
         data = data[data["DATE"] >= start_date]
