@@ -67,90 +67,7 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     for cell in bold_cells:
         driver_log_template[cell].font = Font(name='Calibri', color='FFFFFF', size=11.5, b=True)
 
-    df_openpyxl = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx',
-                                sheet_name=sheet_name,
-                                engine='openpyxl',
-                                header=None)
-    print(f"openpyxl engine: {df_openpyxl.shape}")
-
-    # 2. Check for hidden rows using openpyxl directly
-    wb = load_workbook('../../Dump Trucking BookRecords - TEST.xlsx')
-    ws = wb[sheet_name]
-    hidden_rows = []
-    for row in range(1, ws.max_row + 1):
-        if ws.row_dimensions[row].hidden:
-            hidden_rows.append(row)
-    print(f"Max row according to openpyxl: {ws.max_row}")
-    print(f"Hidden rows: {len(hidden_rows)}")
-    print(f"First few hidden rows: {hidden_rows[:10]}")
-
-    # 3. Check for filters
-    if ws.auto_filter:
-        print(f"Auto filter detected: {ws.auto_filter.ref}")
-
-    # 4. Try reading with xlrd engine (for older .xls files)
-    # Note: This won't work for .xlsx, but worth trying if you can save as .xls
-    try:
-        df_xlrd = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx',
-                                sheet_name=sheet_name,
-                                engine='xlrd',
-                                header=None)
-        print(f"xlrd engine: {df_xlrd.shape}")
-    except:
-        print("xlrd engine failed (expected for .xlsx)")
-
-    # 5. Check the actual last row with data
-    last_row_with_data = None
-    for row in range(ws.max_row, 0, -1):
-        if any(ws.cell(row, col).value is not None for col in range(1, ws.max_column + 1)):
-            last_row_with_data = row
-            break
-    print(f"Last row with actual data: {last_row_with_data}")
-
-    # 6. Read ALL rows manually to compare
-    all_data = []
-    for row in ws.iter_rows(min_row=1, max_row=ws.max_row, values_only=True):
-        all_data.append(row)
-    print(f"Manual read row count: {len(all_data)}")
-
-    # 7. Check if pandas is stopping at blank rows
-    df_skipna = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx',
-                              sheet_name=sheet_name,
-                              header=None)
-    print(f"With skip_blank_lines=False: {df_skipna.shape}")
-
-    # df_raw = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name, header=None)
-    # print(f"Raw shape: {df_raw.shape}")
-    # print(f"Total rows in raw data: {len(df_raw)}")
-
     df = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
-    print(f"Parsed shape: {df.shape}")
-    print(f"Total rows after parsing: {len(df)}")
-
-    # # Check for empty rows in the DATE column
-    # print(f"\nNull dates: {df['DATE'].isna().sum()}")
-    # print(f"Non-null dates: {df['DATE'].notna().sum()}")
-    #
-    # # See what the actual values look like in those NaT rows
-    # print("\nRows around the NaT values:")
-    # print(df.iloc[4110:4125][["DATE", "PROJECT ID"]])
-    #
-    # df["DATE"] = pd.to_datetime(df["DATE"])
-    #
-    # pd.set_option('display.max_rows', None)  # Show all rows
-    #
-    # print(df["DATE"])
-    #
-    # pd.set_option('display.max_rows', 60)
-
-    # DEBUG: Print all unique project IDs with their repr() to see hidden characters
-    # print("\n=== DEBUG: All unique PROJECT IDs in dataframe ===")
-    # unique_ids = sorted(df["PROJECT ID"].unique(), key=str)
-    # for uid in unique_ids:
-    #     print(f"ID: '{uid}' | repr: {repr(uid)} | type: {type(uid)}")
-    #
-    # print(f"\n=== DEBUG: Input project_id ===")
-    # print(f"ID: '{project_id}' | repr: {repr(project_id)} | type: {type(project_id)}")
 
     # Optional: Strip whitespace from both
     df["PROJECT ID"] = df["PROJECT ID"].astype(str).str.strip()
@@ -159,16 +76,12 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     # Filter data to only include data for project ID that matches the date range
     data = df[df["PROJECT ID"] == project_id]
     print(f"\n=== DEBUG: Rows matched: {len(data)} ===")
-    print(data)
-    print(data["DATE"])
     # Apply date filters if they are defined
     if pd.notna(start_date):
         data = data[data["DATE"] >= start_date]
     if pd.notna(end_date):
         data = data[data["DATE"] <= end_date]
 
-    print("now data after date filter: ")
-    print(data)
     validate_data(data, project_id)
 
     invoice_template = 'InvoiceASAP_Template_2025_NonTaxable.xlsx' if not taxable else 'InvoiceASAP_Template_2025.xlsx'
