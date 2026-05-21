@@ -8,7 +8,7 @@ A Python application that automates the creation of driver logs and invoices for
 
 2. Install required packages:
 ```bash
-pip install pandas PySimpleGUI openpyxl Pillow
+pip install pandas FreeSimpleGUI openpyxl Pillow
 ```
 
 You may need to use pip3 instead of pip
