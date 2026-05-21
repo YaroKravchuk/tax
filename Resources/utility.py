@@ -1,5 +1,5 @@
 import pandas as pd
-import PySimpleGUI
+import FreeSimpleGUI as PySimpleGUI
 from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.styles import Font

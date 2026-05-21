@@ -1,6 +1,6 @@
 from sheet_manager import SheetManager
 from utility import collect_UI_input
-import PySimpleGUI
+import FreeSimpleGUI as PySimpleGUI
 import traceback
 import os
 import sys
