@@ -1,19 +1,43 @@
 from openpyxl.drawing.image import Image
 from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
+import math
 import os
 import pandas as pd
 from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles.colors import BLUE
+from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.utils.units import pixels_to_EMU as p2e
 
 # Folder holding the logo and the signature images
 IMAGE_FOLDER = 'pngs'
 
-# Size of the merged B25:D25 "Signature:" cell that holds the driver's signature, in pixels
-DRIVER_SIGNATURE_CELL_WIDTH = 195
-DRIVER_SIGNATURE_MAX_HEIGHT = 40
+# Cells on the driver log that each image sits in
+LOGO_CELLS = 'O1:P4'
+APPROVER_SIGNATURE_CELLS = 'M25:P25'
+DRIVER_SIGNATURE_CELLS = 'B25:D25'
+
+# Gap left between an image and the edge of the cells holding it, in points, so ink
+# never touches the black border around the cell
+IMAGE_PADDING = 2
+
+# The logo is a brand mark, so it keeps a fixed size in pixels rather than filling its cells
+LOGO_WIDTH = 90
+LOGO_HEIGHT = 65
+
+# Excel measures column widths in "characters", meaning the width of a digit in the
+# workbook's default font. That font is Times New Roman 10 here, whose digits are 5
+# points wide, and no extra padding is added on top. Both numbers were measured against
+# Excel itself, so re-measure them if the template's default font is ever changed.
+POINTS_PER_CHARACTER = 5.0
+DEFAULT_COLUMN_CHARACTERS = 9.0
+DEFAULT_ROW_POINTS = 15
+
+# Images are sized in pixels, while cells are measured in points. There are 96 pixels
+# and 72 points to an inch, and a point is 12700 English Metric Units.
+POINTS_PER_PIXEL = 0.75
+EMU_PER_POINT = 12700
 
 
 # Function to find the signature image file for a driver. Signature files live in the pngs
@@ -35,6 +59,74 @@ def scale_image_to_fit(image, max_width, max_height):
     scale = min(max_width / image.width, max_height / image.height, 1)
     image.width = round(image.width * scale)
     image.height = round(image.height * scale)
+
+
+# Function to measure one column in points. Excel lays columns out on whole points,
+# and rounding here reproduces every column width it reports for this template.
+def column_points(sheet, column_index):
+    column = sheet.column_dimensions.get(get_column_letter(column_index))
+    characters = column.width if column is not None and column.width else DEFAULT_COLUMN_CHARACTERS
+    return round(characters * POINTS_PER_CHARACTER)
+
+
+# Function to measure one row in points. Excel drops the fraction of a row height
+# rather than rounding it, which is why row 25 measures 32 points here and not 32.5.
+def row_points(sheet, row_index):
+    row = sheet.row_dimensions.get(row_index)
+    return math.floor(row.height if row is not None and row.height else DEFAULT_ROW_POINTS)
+
+
+# Function to measure a block of cells in points, which is the unit Excel positions in
+def cells_size(sheet, cell_range):
+    min_col, min_row, max_col, max_row = range_boundaries(cell_range)
+    width = sum(column_points(sheet, index) for index in range(min_col, max_col + 1))
+    height = sum(row_points(sheet, index) for index in range(min_row, max_row + 1))
+    return width, height
+
+
+# Function to turn a distance from the top left of a block of cells into an anchor.
+# An image is pinned to one cell plus an offset, and Excel ignores any part of that
+# offset reaching past the cell it belongs to, so the offset has to be carried across
+# into later columns and rows until what is left fits inside a single cell. LibreOffice
+# is forgiving about this, so getting it wrong looks fine in the PDF but not in Excel.
+def cell_anchor(sheet, cell_range, left_offset, top_offset):
+    min_col, min_row, max_col, max_row = range_boundaries(cell_range)
+
+    column_index = min_col
+    while column_index < max_col and left_offset >= column_points(sheet, column_index):
+        left_offset -= column_points(sheet, column_index)
+        column_index += 1
+
+    row_index = min_row
+    while row_index < max_row and top_offset >= row_points(sheet, row_index):
+        top_offset -= row_points(sheet, row_index)
+        row_index += 1
+
+    return AnchorMarker(col=column_index - 1, colOff=round(left_offset * EMU_PER_POINT),
+                        row=row_index - 1, rowOff=round(top_offset * EMU_PER_POINT))
+
+
+# Function to place an image in the middle of a block of cells. Measuring the cells and
+# working the position out from them keeps every image centred by construction, so the
+# template's rows and columns can be resized without images drifting out of place
+def add_image_to_cells(sheet, image_path, cell_range, width=None, height=None):
+    image = Image(image_path)
+    area_width, area_height = cells_size(sheet, cell_range)
+
+    if width is not None and height is not None:
+        image.width, image.height = width, height
+    else:
+        scale_image_to_fit(image,
+                           (area_width - IMAGE_PADDING * 2) / POINTS_PER_PIXEL,
+                           (area_height - IMAGE_PADDING * 2) / POINTS_PER_PIXEL)
+
+    image_width = image.width * POINTS_PER_PIXEL
+    image_height = image.height * POINTS_PER_PIXEL
+
+    marker = cell_anchor(sheet, cell_range,
+                         (area_width - image_width) / 2, (area_height - image_height) / 2)
+    image.anchor = OneCellAnchor(_from=marker, ext=XDRPositiveSize2D(p2e(image.width), p2e(image.height)))
+    sheet.add_image(image)
 
 
 class SheetManager:
@@ -232,25 +324,10 @@ class SheetManager:
 
     # Function to configure the Logo image and the Signature images for the driver log
     def add_images_to_driver_log(self, driver_name):
-        # Logo image setup
-        logo_image = Image(os.path.join(IMAGE_FOLDER, 'logo.png'))
-        logo_image.width = 90
-        logo_image.height = 65
-        # Create offset. O1 is column 14, row 0
-        logo_size = XDRPositiveSize2D(p2e(logo_image.width), p2e(logo_image.height))
-        logo_marker = AnchorMarker(col=14, colOff=p2e(10), row=0, rowOff=p2e(10))
-        logo_image.anchor = OneCellAnchor(_from=logo_marker, ext=logo_size)
-
-        # Approver's signature image setup
-        signature_image = Image(os.path.join(IMAGE_FOLDER, 'sig.png'))
-        signature_image.width = 104
-        signature_image.height = 40
-        # Create offset. M21 is column 12, row 25
-        sig_size = XDRPositiveSize2D(p2e(signature_image.width), p2e(signature_image.height))
-        sig_marker = AnchorMarker(col=12, colOff=p2e(30), row=24, rowOff=p2e(2))
-        signature_image.anchor = OneCellAnchor(_from=sig_marker, ext=sig_size)
-        self.driver_log_sheet.add_image(logo_image)
-        self.driver_log_sheet.add_image(signature_image)
+        add_image_to_cells(self.driver_log_sheet, os.path.join(IMAGE_FOLDER, 'logo.png'), LOGO_CELLS,
+                           width=LOGO_WIDTH, height=LOGO_HEIGHT)
+        add_image_to_cells(self.driver_log_sheet, os.path.join(IMAGE_FOLDER, 'sig.png'),
+                           APPROVER_SIGNATURE_CELLS)
 
         self.add_driver_signature_to_driver_log(driver_name)
 
@@ -260,14 +337,7 @@ class SheetManager:
         if signature_file is None:
             return
 
-        driver_signature_image = Image(signature_file)
-        scale_image_to_fit(driver_signature_image, DRIVER_SIGNATURE_CELL_WIDTH, DRIVER_SIGNATURE_MAX_HEIGHT)
-        # Create offset. B25 is column 1, row 24. Center the signature inside the merged B25:D25 cell
-        sig_size = XDRPositiveSize2D(p2e(driver_signature_image.width), p2e(driver_signature_image.height))
-        sig_marker = AnchorMarker(col=1, colOff=p2e((DRIVER_SIGNATURE_CELL_WIDTH - driver_signature_image.width) // 2),
-                                  row=24, rowOff=p2e(2))
-        driver_signature_image.anchor = OneCellAnchor(_from=sig_marker, ext=sig_size)
-        self.driver_log_sheet.add_image(driver_signature_image)
+        add_image_to_cells(self.driver_log_sheet, signature_file, DRIVER_SIGNATURE_CELLS)
 
     def merge_date_cells(self):
         current_val = None
