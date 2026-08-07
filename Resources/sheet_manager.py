@@ -1,11 +1,40 @@
 from openpyxl.drawing.image import Image
 from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
+import os
 import pandas as pd
 from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles.colors import BLUE
 from openpyxl.utils.units import pixels_to_EMU as p2e
+
+# Folder holding the logo and the signature images
+IMAGE_FOLDER = 'pngs'
+
+# Size of the merged B25:D25 "Signature:" cell that holds the driver's signature, in pixels
+DRIVER_SIGNATURE_CELL_WIDTH = 195
+DRIVER_SIGNATURE_MAX_HEIGHT = 40
+
+
+# Function to find the signature image file for a driver. Signature files live in the pngs
+# folder and are named after the driver's name in BookRecords, e.g. "Vlad" -> Vlad_signature.png
+def get_driver_signature_file(driver_name):
+    if not pd.notna(driver_name):
+        return None
+
+    signature_file = os.path.join(IMAGE_FOLDER, str(driver_name).strip().capitalize() + "_signature.png")
+    if not os.path.exists(signature_file):
+        print(f"No signature image found for driver '{driver_name}' (looked for {signature_file})")
+        return None
+
+    return signature_file
+
+
+# Function to shrink an image so it fits inside the given box while keeping its aspect ratio
+def scale_image_to_fit(image, max_width, max_height):
+    scale = min(max_width / image.width, max_height / image.height, 1)
+    image.width = round(image.width * scale)
+    image.height = round(image.height * scale)
 
 
 class SheetManager:
@@ -54,7 +83,11 @@ class SheetManager:
         self.driver_log_sheet['F7'] = row["PROJECT ID"]
         self.driver_log_sheet['N7'] = row["TRUCK ID#"]
 
-        self.add_images_to_driver_log()
+        driver_name = row.get("DRIVER'S NAME")
+        if pd.notna(driver_name):
+            self.driver_log_sheet['B24'] = driver_name
+
+        self.add_images_to_driver_log(driver_name)
 
     # Function to input a single row of driver log data
     def populate_driver_log_sheet(self, row):
@@ -197,10 +230,10 @@ class SheetManager:
                           f" {product}")
             )
 
-    # Function to configure the Logo image and the Signature image for the driver log
-    def add_images_to_driver_log(self):
+    # Function to configure the Logo image and the Signature images for the driver log
+    def add_images_to_driver_log(self, driver_name):
         # Logo image setup
-        logo_image = Image('logo.png')
+        logo_image = Image(os.path.join(IMAGE_FOLDER, 'logo.png'))
         logo_image.width = 90
         logo_image.height = 65
         # Create offset. O1 is column 14, row 0
@@ -208,8 +241,8 @@ class SheetManager:
         logo_marker = AnchorMarker(col=14, colOff=p2e(10), row=0, rowOff=p2e(10))
         logo_image.anchor = OneCellAnchor(_from=logo_marker, ext=logo_size)
 
-        # Signature image setup
-        signature_image = Image('sig.png')
+        # Approver's signature image setup
+        signature_image = Image(os.path.join(IMAGE_FOLDER, 'sig.png'))
         signature_image.width = 104
         signature_image.height = 40
         # Create offset. M21 is column 12, row 25
@@ -218,6 +251,23 @@ class SheetManager:
         signature_image.anchor = OneCellAnchor(_from=sig_marker, ext=sig_size)
         self.driver_log_sheet.add_image(logo_image)
         self.driver_log_sheet.add_image(signature_image)
+
+        self.add_driver_signature_to_driver_log(driver_name)
+
+    # Function to add the driver's signature image under "Driver's Name" / "Signature"
+    def add_driver_signature_to_driver_log(self, driver_name):
+        signature_file = get_driver_signature_file(driver_name)
+        if signature_file is None:
+            return
+
+        driver_signature_image = Image(signature_file)
+        scale_image_to_fit(driver_signature_image, DRIVER_SIGNATURE_CELL_WIDTH, DRIVER_SIGNATURE_MAX_HEIGHT)
+        # Create offset. B25 is column 1, row 24. Center the signature inside the merged B25:D25 cell
+        sig_size = XDRPositiveSize2D(p2e(driver_signature_image.width), p2e(driver_signature_image.height))
+        sig_marker = AnchorMarker(col=1, colOff=p2e((DRIVER_SIGNATURE_CELL_WIDTH - driver_signature_image.width) // 2),
+                                  row=24, rowOff=p2e(2))
+        driver_signature_image.anchor = OneCellAnchor(_from=sig_marker, ext=sig_size)
+        self.driver_log_sheet.add_image(driver_signature_image)
 
     def merge_date_cells(self):
         current_val = None

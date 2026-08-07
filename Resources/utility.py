@@ -29,6 +29,7 @@ def create_layout():
         [PySimpleGUI.Checkbox('Taxable')],
         [PySimpleGUI.Checkbox('Include Driver Logs', default=True)],
         [PySimpleGUI.Checkbox('Include Invoice', default=True)],
+        [PySimpleGUI.Checkbox('Also Save as PDF', default=True)],
         [PySimpleGUI.Text('_' * 80)],
         [PySimpleGUI.Submit(), PySimpleGUI.Cancel()]
     ]
@@ -53,12 +54,14 @@ def collect_UI_input():
         end_date,      # End Date
         values[4],     # Taxable checkbox
         values[5],     # Driver Log checkbox
-        values[6]      # Invoice checkbox
+        values[6],     # Invoice checkbox
+        values[7]      # PDF checkbox
     )
 
 
 # Function to create new materials like workbooks, the data table, and template sheets
-def create_materials(sheet_name, project_id, start_date, end_date, taxable, should_create_driver_logs, should_create_invoice):
+def create_materials(sheet_name, project_id, start_date, end_date, taxable, should_create_driver_logs,
+                     should_create_invoice, should_export_pdf=True):
     driver_log_wb = load_workbook(filename='MASTER_DumpTruck_TimeSheet_ProspectLLC_2025_FINAL.xlsx')
     driver_log_template = driver_log_wb["2024 Version"]
     driver_log_template['B2'].font = Font(name='Calibri', color='FFFFFF', size=18, b=True)
@@ -98,8 +101,8 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     del driver_log_wb['2024 Version']
 
     return (project_id, driver_log_wb, invoice_wb, invoice_sheet, driver_log_template, data, taxable,
-            should_create_driver_logs, should_create_invoice, min_date.strftime('%b %d').upper(),
-            max_date.strftime('%b %d').upper())
+            should_create_driver_logs, should_create_invoice, should_export_pdf,
+            min_date.strftime('%b %d').upper(), max_date.strftime('%b %d').upper())
 
 
 # Function to check if BookRecords data exists and contains the correct columns

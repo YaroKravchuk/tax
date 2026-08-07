@@ -1,3 +1,10 @@
 .DS_Store
 .idea/
 __pycache__/
+
+# Driver logs and invoices the program generates. They hold customer names,
+# addresses and rates, so they must never be committed to this repository.
+/INVOICE__*.xlsx
+/INVOICE__*.pdf
+/DRIVER LOGS__*.xlsx
+/DRIVER LOGS__*.pdf
