@@ -65,15 +65,27 @@ echo.
 
 REM ---- Find Python the same way CLICK_TO_RUN.bat does ----
 call "%REPO%\find_python.bat"
-if not defined PYTHON (
-    echo    PROBLEM: Python is not installed on this computer.
-    echo.
-    echo    Install it from https://www.python.org/downloads/
-    echo    Tick "Add Python to PATH" while installing, then run this file again.
-    echo.
-    pause
-    exit /b 1
-)
+if defined PYTHON goto :python_ok
+
+if defined PYTHON_TOO_OLD echo    PROBLEM: This computer has Python %PYTHON_TOO_OLD%, but the program needs %PYTHON_MIN% or newer.
+if not defined PYTHON_TOO_OLD echo    PROBLEM: Python is not installed on this computer.
+echo.
+echo    Install Python %PYTHON_MIN% or newer from https://www.python.org/downloads/
+echo    Tick "Add Python to PATH" while installing, then run this file again.
+echo.
+pause
+exit /b 1
+
+REM A Python newer than has been tried still gets used. It is only worth saying so
+REM here, where packages are installed, because that is what a brand new Python
+REM tends to trip up.
+:python_ok
+if not defined PYTHON_UNTESTED goto :version_noted
+echo    Note: Python %PYTHON_UNTESTED% is newer than %PYTHON_MAX%, the newest tried so far.
+echo    Carrying on. If installing below fails, this is the likely reason.
+echo.
+
+:version_noted
 
 REM ---- Git is what downloads the update, so check it before starting ----
 git --version >nul 2>&1
