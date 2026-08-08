@@ -39,11 +39,14 @@ Without these the Excel files are still created, and only the PDF step is skippe
 
 ## Usage
 
-1. Run the main script
+1. Double-click **CLICK_TO_RUN.bat**, or run the main script by hand:
 ```bash
 python tax.py
 ```
 You may need to use python3 instead of python
+
+Both `CLICK_TO_RUN.bat` and `CLICK_TO_UPDATE.bat` find Python through `find_python.bat`,
+which uses whichever version is installed. They will not stop working when Python is upgraded.
 
 2. In the GUI:
     - Select the appropriate "Dump Trucking" year sheet

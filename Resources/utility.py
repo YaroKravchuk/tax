@@ -1,4 +1,7 @@
+import os
 import pandas as pd
+import platform
+import subprocess
 import FreeSimpleGUI as PySimpleGUI
 from datetime import datetime
 from openpyxl import load_workbook
@@ -36,10 +39,33 @@ def create_layout():
     return form, layout
 
 
+# Function to open the folder holding the finished files, so they do not have to be hunted for
+def open_output_folder(folder):
+    try:
+        if platform.system() == 'Windows':
+            os.startfile(folder)
+        else:
+            subprocess.run(['open', folder], check=False)
+    except Exception as e:
+        print(f"Could not open the folder {folder}: {str(e)}")
+
+
 def collect_UI_input():
     form, layout = create_layout()
     window = form.Layout(layout)
     button, values = window.Read()
+    # Take the form off the screen, rather than leaving it sitting there looking
+    # frozen while the workbooks and PDFs are being made
+    window.close()
+
+    # Pressing Cancel, or closing the window with the X, leaves without creating anything.
+    # Closing the window gives back no values at all, so that is checked before using them.
+    if button != 'Submit' or values is None:
+        return None
+
+    if not values[5] and not values[6]:
+        raise ValueError('Nothing was chosen to create.'
+                         '\n\nTick "Include Driver Logs" or "Include Invoice", then try again.')
 
     try:
         start_date = pd.to_datetime(values[2]) if values[2] else pd.NaT

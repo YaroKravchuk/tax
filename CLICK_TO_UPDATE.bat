@@ -8,15 +8,8 @@ echo    Updating the Dump Trucking program
 echo ==================================================
 echo.
 
-REM ---- Find Python, trying the same one CLICK_TO_RUN.bat uses first ----
-set "PYTHON="
-python3.13 --version >nul 2>&1 && set "PYTHON=python3.13"
-if not defined PYTHON (
-    py --version >nul 2>&1 && set "PYTHON=py"
-)
-if not defined PYTHON (
-    python --version >nul 2>&1 && set "PYTHON=python"
-)
+REM ---- Find Python the same way CLICK_TO_RUN.bat does ----
+call "%~dp0find_python.bat"
 if not defined PYTHON (
     echo    PROBLEM: Python is not installed on this computer.
     echo.

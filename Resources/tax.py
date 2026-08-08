@@ -1,6 +1,6 @@
 from sheet_manager import SheetManager
 from pdf_exporter import export_to_pdf
-from utility import collect_UI_input
+from utility import collect_UI_input, open_output_folder
 import FreeSimpleGUI as PySimpleGUI
 import traceback
 import os
@@ -9,8 +9,14 @@ import sys
 try:
     # Create UI and collect user input from form.
     # Then, create materials such as template sheets and new files
+    user_input = collect_UI_input()
+
+    # Cancel, or closing the window, leaves quietly without creating anything
+    if user_input is None:
+        sys.exit()
+
     (project_id, driver_log_wb, invoice_wb, invoice_sheet, driver_log_template, data, taxable, should_create_driver_logs,
-     should_create_invoice, should_export_pdf, min_date, max_date) = collect_UI_input()
+     should_create_invoice, should_export_pdf, min_date, max_date) = user_input
 
     # Loop over data in BookRecords and add data to driver log sheets and invoice sheet
     sheet_manager = SheetManager(driver_log_wb, driver_log_template, invoice_sheet, taxable)
@@ -38,11 +44,12 @@ try:
 
     # Save a PDF copy of each Excel file that was created. The Excel files are already saved at
     # this point, so a failed PDF export is reported on its own instead of failing the whole run
+    created_files = list(saved_files)
     if should_export_pdf:
         pdf_errors = []
         for saved_file in saved_files:
             try:
-                export_to_pdf(saved_file)
+                created_files.append(export_to_pdf(saved_file))
             except Exception as pdf_error:
                 pdf_errors.append(f'{os.path.basename(saved_file)}\n{str(pdf_error)}')
         if pdf_errors:
@@ -53,6 +60,14 @@ try:
         raise ValueError('There is too much data to fit on the invoice! '
                          '\n\nInvoice has been filled as much data as possible. The rest of the data is not included. '
                          '\n\nDecrease time range to avoid this issue...')
+
+    # Say what was made and where, so the files do not have to be hunted for
+    output_folder = os.path.abspath('..')
+    file_list = '\n'.join(os.path.basename(path) for path in created_files)
+    if PySimpleGUI.Popup(f'Finished! {len(created_files)} files created for {project_id}:',
+                         '', file_list, '', f'Saved in:  {output_folder}',
+                         title='Done', custom_text=('Open Folder', 'Close')) == 'Open Folder':
+        open_output_folder(output_folder)
 
 except Exception as e:
     tb = traceback.extract_tb(sys.exc_info()[2])
