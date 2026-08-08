@@ -2,41 +2,127 @@ import os
 import pandas as pd
 import platform
 import subprocess
-import FreeSimpleGUI as PySimpleGUI
+from collections import namedtuple
 from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.styles import Font
 
+# The book of record for every load. It lives outside this repo, two folders up, and
+# nothing in the program works without it
+BOOK_RECORDS_FILE = '../../Dump Trucking BookRecords - TEST.xlsx'
 
-# Function to create the layout of the UI
-def create_layout():
-    PySimpleGUI.ChangeLookAndFeel('GreenTan')
-    form = PySimpleGUI.FlexForm('Audit', default_element_size=(40, 1))
-    # Open the Excel file
-    excel_file = pd.ExcelFile('../../Dump Trucking BookRecords - TEST.xlsx')
-    # Get all sheet names
-    sheet_names = [name for name in excel_file.sheet_names if 'Dump Trucking' in name]
-    # Check if current year exists in sheet names, and if so, set it as default
-    current_year = str(datetime.now().year)
-    default_sheet = next((name for name in sheet_names if current_year in name), None)
-    layout = [
-        [PySimpleGUI.Text('Generate Audit Daily Load Tickets!', size=(30, 1), font=("Helvetica", 25))],
-        [PySimpleGUI.Text('"Dump Trucking" Year Sheet')],
-        [PySimpleGUI.Combo(sheet_names, size=(30, 1), default_value=default_sheet)],
-        [PySimpleGUI.Text('Project ID')],
-        [PySimpleGUI.InputText()],
-        [PySimpleGUI.Text('Start Date')],
-        [PySimpleGUI.InputText()],
-        [PySimpleGUI.Text('End Date')],
-        [PySimpleGUI.InputText()],
-        [PySimpleGUI.Checkbox('Taxable')],
-        [PySimpleGUI.Checkbox('Include Driver Logs', default=True)],
-        [PySimpleGUI.Checkbox('Include Invoice', default=True)],
-        [PySimpleGUI.Checkbox('Also Save as PDF', default=True)],
-        [PySimpleGUI.Text('_' * 80)],
-        [PySimpleGUI.Submit(), PySimpleGUI.Cancel()]
-    ]
-    return form, layout
+# Sheets holding load data are named for their year, e.g. "2026 Dump Trucking"
+YEAR_SHEET_MARKER = 'Dump Trucking'
+
+# A blank PROJECT ID cell comes back from astype(str) as the text "nan", so every
+# spelling of "no project here" has to be skipped when listing a sheet's projects
+BLANK_PROJECT_IDS = {'', 'nan', 'nat', 'none'}
+
+# Columns the project picker reads. The fuller list a finished run needs is checked
+# later by validate_data, once the data has been narrowed to one project
+PICKER_COLUMNS = ['PROJECT ID', 'DATE', 'CUSTOMER']
+
+# One project as the picker shows it. search_text is the ID folded to lower case once,
+# up front, so that filtering thousands of projects on every keystroke stays cheap
+Project = namedtuple('Project', 'id customer loads first_date last_date search_text')
+
+# Everything a run needs to write its workbooks
+Materials = namedtuple('Materials', 'driver_log_wb driver_log_template invoice_wb invoice_sheet '
+                                    'data min_date max_date')
+
+
+class BookRecords:
+    """The BookRecords workbook, read once and then kept.
+
+    The form needs the load data to offer projects to pick from, and the generator
+    needs the same data to fill the sheets. Reading it once here means a big workbook
+    is parsed a single time per run instead of once for each of them.
+    """
+
+    def __init__(self, path=BOOK_RECORDS_FILE):
+        self.path = path
+        self._sheets = {}
+        self._projects = {}
+        try:
+            # Noted before anything is read, so that what the form reports about the file
+            # is the state of the file the numbers actually came from
+            self.full_path = os.path.abspath(path)
+            self.read_mtime = os.path.getmtime(path)
+            self.last_saved = datetime.fromtimestamp(self.read_mtime)
+            self.sheet_names = pd.ExcelFile(path).sheet_names
+        except FileNotFoundError:
+            raise ValueError('The load records could not be found.'
+                             f'\n\nThe program expected them here:\n{os.path.abspath(path)}')
+
+    # Function to spot the records being saved again while the form is still open, which
+    # would leave the form offering data that is already out of date
+    def has_been_saved_since_read(self):
+        try:
+            return os.path.getmtime(self.path) != self.read_mtime
+        except OSError:
+            return False
+
+    # Function to list the year sheets that hold load data, newest year first
+    def year_sheet_names(self):
+        return sorted((name for name in self.sheet_names if YEAR_SHEET_MARKER in name), reverse=True)
+
+    # Function to pick the year sheet to start on, which is this year's when there is one
+    def default_year_sheet(self):
+        sheet_names = self.year_sheet_names()
+        current_year = str(datetime.now().year)
+        return next((name for name in sheet_names if current_year in name), sheet_names[0])
+
+    # Function to read one year sheet, holding on to it so a second look is free
+    def sheet(self, sheet_name):
+        if sheet_name not in self._sheets:
+            df = pd.read_excel(self.path, sheet_name=sheet_name)
+
+            missing_columns = [column for column in PICKER_COLUMNS if column not in df.columns]
+            if missing_columns:
+                raise ValueError(f'The sheet "{sheet_name}" is missing the '
+                                 f'{", ".join(missing_columns)} column(s), so its loads cannot be read.')
+
+            # Project IDs are compared as text everywhere, so they are squared away once here
+            df['PROJECT ID'] = df['PROJECT ID'].astype(str).str.strip()
+            self._sheets[sheet_name] = df
+
+        return self._sheets[sheet_name]
+
+    # Function to list every project on a year sheet, most recently worked first, each
+    # with the customer, load count and dates that let the right one be recognised
+    def projects(self, sheet_name):
+        if sheet_name not in self._projects:
+            self._projects[sheet_name] = self._build_project_list(sheet_name)
+        return self._projects[sheet_name]
+
+    def _build_project_list(self, sheet_name):
+        df = self.sheet(sheet_name)
+        named = df[~df['PROJECT ID'].str.lower().isin(BLANK_PROJECT_IDS)]
+        if named.empty:
+            return []
+
+        summary = named.groupby('PROJECT ID', sort=False).agg(
+            customer=('CUSTOMER', 'last'),
+            loads=('PROJECT ID', 'size'),
+            first_date=('DATE', 'min'),
+            last_date=('DATE', 'max'),
+        ).sort_values('last_date', ascending=False, na_position='last')
+
+        return [Project(project_id, row.customer, int(row.loads), row.first_date, row.last_date,
+                        project_id.lower())
+                for project_id, row in summary.iterrows()]
+
+
+# Function to narrow a year sheet down to one project inside a date range. The form and
+# the generator both call this, so what the form promises is exactly what gets built
+def filter_loads(records, sheet_name, project_id, start_date, end_date):
+    data = records.sheet(sheet_name)
+    data = data[data['PROJECT ID'] == project_id]
+    if pd.notna(start_date):
+        data = data[data['DATE'] >= start_date]
+    if pd.notna(end_date):
+        data = data[data['DATE'] <= end_date]
+    return data
 
 
 # Function to open the folder holding the finished files, so they do not have to be hunted for
@@ -50,44 +136,8 @@ def open_output_folder(folder):
         print(f"Could not open the folder {folder}: {str(e)}")
 
 
-def collect_UI_input():
-    form, layout = create_layout()
-    window = form.Layout(layout)
-    button, values = window.Read()
-    # Take the form off the screen, rather than leaving it sitting there looking
-    # frozen while the workbooks and PDFs are being made
-    window.close()
-
-    # Pressing Cancel, or closing the window with the X, leaves without creating anything.
-    # Closing the window gives back no values at all, so that is checked before using them.
-    if button != 'Submit' or values is None:
-        return None
-
-    if not values[5] and not values[6]:
-        raise ValueError('Nothing was chosen to create.'
-                         '\n\nTick "Include Driver Logs" or "Include Invoice", then try again.')
-
-    try:
-        start_date = pd.to_datetime(values[2]) if values[2] else pd.NaT
-        end_date = pd.to_datetime(values[3]) if values[3] else pd.NaT
-    except ValueError:
-        raise ValueError("Invalid date format. Please enter a valid date (e.g. MM/DD/YYYY, YYYY-MM-DD)")
-
-    return create_materials(
-        values[0],     # Sheet Name
-        values[1],     # Project ID
-        start_date,    # Start Date
-        end_date,      # End Date
-        values[4],     # Taxable checkbox
-        values[5],     # Driver Log checkbox
-        values[6],     # Invoice checkbox
-        values[7]      # PDF checkbox
-    )
-
-
 # Function to create new materials like workbooks, the data table, and template sheets
-def create_materials(sheet_name, project_id, start_date, end_date, taxable, should_create_driver_logs,
-                     should_create_invoice, should_export_pdf=True):
+def create_materials(choices):
     driver_log_wb = load_workbook(filename='MASTER_DumpTruck_TimeSheet_ProspectLLC_2025_FINAL.xlsx')
     driver_log_template = driver_log_wb["2024 Version"]
     driver_log_template['B2'].font = Font(name='Calibri', color='FFFFFF', size=18, b=True)
@@ -96,39 +146,26 @@ def create_materials(sheet_name, project_id, start_date, end_date, taxable, shou
     for cell in bold_cells:
         driver_log_template[cell].font = Font(name='Calibri', color='FFFFFF', size=11.5, b=True)
 
-    df = pd.read_excel('../../Dump Trucking BookRecords - TEST.xlsx', sheet_name=sheet_name)
+    data = filter_loads(choices.records, choices.sheet_name, choices.project_id,
+                        choices.start_date, choices.end_date)
+    validate_data(data, choices.project_id)
 
-    # Optional: Strip whitespace from both
-    df["PROJECT ID"] = df["PROJECT ID"].astype(str).str.strip()
-    project_id = str(project_id).strip()
-
-    # Filter data to only include data for project ID that matches the date range
-    data = df[df["PROJECT ID"] == project_id]
-    print(f"\n=== DEBUG: Rows matched: {len(data)} ===")
-    # Apply date filters if they are defined
-    if pd.notna(start_date):
-        data = data[data["DATE"] >= start_date]
-    if pd.notna(end_date):
-        data = data[data["DATE"] <= end_date]
-
-    validate_data(data, project_id)
-
-    invoice_template = 'InvoiceASAP_Template_2025_NonTaxable.xlsx' if not taxable else 'InvoiceASAP_Template_2025.xlsx'
+    invoice_template = ('InvoiceASAP_Template_2025.xlsx' if choices.taxable
+                        else 'InvoiceASAP_Template_2025_NonTaxable.xlsx')
     invoice_wb = load_workbook(filename=invoice_template)
     invoice_wb["Blank_Template"].title = "Invoice"
     invoice_sheet = invoice_wb["Invoice"]
     min_date = data['DATE'].min()
     max_date = data['DATE'].max()
-    invoice_sheet["D5"] = project_id
+    invoice_sheet["D5"] = choices.project_id
     invoice_sheet["G2"] = f"Start: {min_date.strftime('%m/%d/%y')}"
     invoice_sheet["H2"] = f"End: {max_date.strftime('%m/%d/%y')}"
 
     # Delete template sheet from final workbook file
     del driver_log_wb['2024 Version']
 
-    return (project_id, driver_log_wb, invoice_wb, invoice_sheet, driver_log_template, data, taxable,
-            should_create_driver_logs, should_create_invoice, should_export_pdf,
-            min_date.strftime('%b %d').upper(), max_date.strftime('%b %d').upper())
+    return Materials(driver_log_wb, driver_log_template, invoice_wb, invoice_sheet, data,
+                     min_date.strftime('%b %d').upper(), max_date.strftime('%b %d').upper())
 
 
 # Function to check if BookRecords data exists and contains the correct columns

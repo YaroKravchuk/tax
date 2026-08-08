@@ -54,6 +54,11 @@ Both `CLICK_TO_RUN.bat` and `CLICK_TO_UPDATE.bat` find Python through `find_pyth
 which uses whichever version is installed. They will not stop working when Python is upgraded.
 
 2. In the GUI:
+    - Check the top of the form. It names the BookRecords file the numbers are being read
+      from, the folder it sits in, and when that file was last saved, both as a date and as
+      plain "11 minutes ago". If edits were just made and it still says days ago, the file
+      being edited is not the file the program is reading. Saving the records while the form
+      is open turns that line red, because the form is then working from older data
     - Select the appropriate "Dump Trucking" year sheet
     - Find the project. The box under Project ID searches as you type, and the list
       underneath shows what matches, most recently worked first. Any part of the address
