@@ -11,7 +11,7 @@ A Python application that automates the creation of driver logs and invoices for
 3. Double-click **CLICK_TO_UPDATE.bat**
 
 That downloads the newest version of the program, installs everything it needs, and
-makes a **Driver Logs** shortcut in this folder to open it with.
+makes the **CLICK_TO_RUN** shortcut in this folder to open it with.
 Run it again any time to pick up the latest changes; no command prompt required.
 
 ### By hand
@@ -45,7 +45,7 @@ Without these the Excel files are still created, and only the PDF step is skippe
 
 ## Usage
 
-1. Double-click the **Driver Logs** shortcut, or run the main script by hand:
+1. Double-click the **CLICK_TO_RUN** shortcut, or run the main script by hand:
 ```bash
 python tax.py
 ```
@@ -56,10 +56,12 @@ points straight at `pythonw.exe`, the copy of Python built as a window program r
 a console one, so the program opens on its own with no black window behind it. It is also
 the quickest way in, since none of the looking for Python is repeated at every start.
 
-**CLICK_TO_RUN.bat** still works and is the one to use when something is wrong: it keeps a
-console open, which is where anything the program cannot report in a window of its own will
-appear. It and `CLICK_TO_UPDATE.bat` find Python through `Resources\find_python.bat`, which
-uses whichever version is installed, so neither stops working when Python is upgraded.
+`Resources\CLICK_TO_RUN.bat` is the spare way in, and the one to use when something is
+wrong: it keeps a console open, which is where anything the program cannot report in a
+window of its own will appear. Windows hides the `.lnk` ending, so the shortcut shows as
+plain **CLICK_TO_RUN** and the two are never mistaken for one another. Both it and
+`CLICK_TO_UPDATE.bat` find Python through `Resources\find_python.bat`, which uses whichever
+version is installed, so neither stops working when Python is upgraded.
 
 2. In the GUI:
     - Check the line at the top saying when the records were last saved. If edits were just

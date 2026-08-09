@@ -155,7 +155,7 @@ echo    All up to date!
 echo.
 echo    Close this window, then double-click
 if defined SHORTCUT_MADE echo    %SHORTCUT_LABEL% to make driver logs.
-if not defined SHORTCUT_MADE echo    CLICK_TO_RUN.bat to make driver logs.
+if not defined SHORTCUT_MADE echo    Resources\CLICK_TO_RUN.bat to make driver logs.
 echo ==================================================
 echo.
 pause
@@ -167,19 +167,21 @@ REM Double-clicking a .bat makes Windows open a console before a single line of 
 REM runs, so no batch file can start the program without one appearing. A shortcut
 REM can: it names pythonw.exe, which is the copy of Python built as a window
 REM program rather than a console one, and Explorer starts it directly. Nothing in
-REM between, which is also why it opens quicker than CLICK_TO_RUN.bat - none of the
-REM looking for Python that this script has already done is repeated at every start.
+REM between, which is also why it opens quicker than the batch file it replaces -
+REM none of the looking for Python done here is repeated at every start.
 REM
 REM It is built here, and not kept in the repository, because it holds the full path
 REM to this computer's Python and to this very folder, both of which are different on
 REM the next computer. Built again on every update, so upgrading Python mends it.
 REM
-REM CLICK_TO_RUN.bat is left exactly as it was. Nothing here can report a failure
-REM once the program is running, and that batch file, with its console, remains the
-REM way to see what went wrong
+REM Resources\CLICK_TO_RUN.bat is kept as the spare way in. Nothing here can report
+REM a failure once the program is running, and that batch file, with its console,
+REM remains the way to see what went wrong
 :make_shortcut
 REM Windows hides the .lnk ending, so the label is what is actually seen in the folder
-set "SHORTCUT_LABEL=Driver Logs"
+REM - which is why the shortcut can carry the name the batch file used to have without
+REM the two ever looking alike. The batch file itself now lives in Resources
+set "SHORTCUT_LABEL=CLICK_TO_RUN"
 set "SHORTCUT=%REPO%\%SHORTCUT_LABEL%.lnk"
 set "SHORTCUT_MADE="
 
@@ -187,6 +189,10 @@ REM Clear out the one from last time first. Left in place, a shortcut still poin
 REM at a Python that has since been upgraded away would pass the check below and be
 REM announced as freshly made, while doing nothing at all when double-clicked
 del /f /q "%SHORTCUT%" >nul 2>&1
+
+REM The name this shortcut was given before, cleared away so the folder is not left
+REM with two of them, one of which nothing builds any more
+del /f /q "%REPO%\Driver Logs.lnk" >nul 2>&1
 
 REM Ask Python only for the folder it lives in, and put the name of its windowless
 REM twin on the end here. Asking for the whole path would need quote characters in
@@ -208,9 +214,9 @@ set "SHORTCUT_MADE=1"
 echo    Made %SHORTCUT_LABEL%, which opens the program without a black window.
 goto :eof
 
-REM Not being able to make it costs nothing: CLICK_TO_RUN.bat still works, and is
-REM what the message at the end will go on pointing at
+REM Not being able to make it costs nothing: the batch file in Resources still works,
+REM and is what the message at the end will go on pointing at
 :no_shortcut
 echo    Note: the shortcut could not be made on this computer.
-echo    Nothing is broken - carry on using CLICK_TO_RUN.bat.
+echo    Nothing is broken - use Resources\CLICK_TO_RUN.bat instead.
 goto :eof

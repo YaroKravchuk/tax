@@ -5,7 +5,7 @@ __pycache__/
 # The shortcut CLICK_TO_UPDATE.bat builds, which opens the program without a
 # console window. It holds the full path to one computer's Python and to one copy
 # of this folder, so it belongs to the machine that made it and not in here.
-/Driver Logs.lnk
+/CLICK_TO_RUN.lnk
 
 # Driver logs and invoices the program generates. They hold customer names,
 # addresses and rates, so they must never be committed to this repository.

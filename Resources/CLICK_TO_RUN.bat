@@ -2,7 +2,15 @@
 setlocal
 title Prospect LLC - Driver Logs
 
-call "%~dp0Resources\find_python.bat"
+REM The spare way in, kept in here beside the program rather than out in the folder
+REM above. The ordinary way is the CLICK_TO_RUN shortcut that CLICK_TO_UPDATE.bat
+REM builds up there, which opens the program without a console window at all.
+REM
+REM This one keeps its console on purpose, which is the whole reason for keeping it:
+REM anything the program cannot put in a window of its own - a package that will not
+REM import, a Python too old to use - can be read here, and nowhere else
+
+call "%~dp0find_python.bat"
 if defined PYTHON goto :python_ok
 
 echo.
@@ -16,14 +24,15 @@ pause
 exit /b 1
 
 :python_ok
-cd /D "%~dp0Resources"
+cd /D "%~dp0"
 %PYTHON% tax.py
 if errorlevel 1 (
     echo.
     echo    The program stopped before it finished.
     echo.
     echo    If the message above mentions a missing module, close this window and
-    echo    double-click CLICK_TO_UPDATE.bat to install what it needs, then try again.
+    echo    double-click CLICK_TO_UPDATE.bat, in the folder above this one, to
+    echo    install what it needs, then try again.
     echo.
     pause
 )

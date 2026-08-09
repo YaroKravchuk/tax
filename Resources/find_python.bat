@@ -1,11 +1,12 @@
 @echo off
 REM Works out which Python to use and hands it back in the PYTHON variable.
 REM
-REM CLICK_TO_RUN.bat and CLICK_TO_UPDATE.bat both call this, so the program always
-REM runs on the same Python its packages were installed into. "py" is the Windows
-REM Python launcher and picks the newest version installed, which keeps everything
-REM working after Python is upgraded. Naming a version here, as this used to with
-REM python3.13, breaks the moment a computer gets a newer Python.
+REM CLICK_TO_RUN.bat, here beside it, and CLICK_TO_UPDATE.bat, in the folder above,
+REM both call this, so the program always runs on the same Python its packages were
+REM installed into. "py" is the Windows Python launcher and picks the newest version
+REM installed, which keeps everything working after Python is upgraded. Naming a
+REM version here, as this used to with python3.13, breaks the moment a computer
+REM gets a newer Python.
 REM
 REM There is deliberately no setlocal in this file. It would throw the variables
 REM below away again before the script that called us could read them.
