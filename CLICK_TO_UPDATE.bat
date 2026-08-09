@@ -99,7 +99,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [Step 1 of 2] Downloading the newest version of the program...
+echo [Step 1 of 3] Downloading the newest version of the program...
 echo.
 
 REM Put .gitignore back in plain sight for as long as the pull takes. It is hidden
@@ -131,7 +131,7 @@ REM result code before the check above had the chance to read it
 attrib +h "%REPO%\.gitignore" >nul 2>&1
 
 echo.
-echo [Step 2 of 2] Installing everything the program needs...
+echo [Step 2 of 3] Installing everything the program needs...
 echo.
 %PYTHON% -m pip install --upgrade pip
 %PYTHON% -m pip install --upgrade pandas ttkbootstrap openpyxl Pillow numpy pywin32
@@ -145,11 +145,72 @@ if errorlevel 1 (
 )
 
 echo.
+echo [Step 3 of 3] Making the shortcut that opens the program...
+echo.
+call :make_shortcut
+
+echo.
 echo ==================================================
 echo    All up to date!
 echo.
 echo    Close this window, then double-click
-echo    CLICK_TO_RUN.bat to make driver logs.
+if defined SHORTCUT_MADE echo    %SHORTCUT_LABEL% to make driver logs.
+if not defined SHORTCUT_MADE echo    CLICK_TO_RUN.bat to make driver logs.
 echo ==================================================
 echo.
 pause
+exit /b
+
+
+REM ---- Build the shortcut that starts the program without a console window ----
+REM Double-clicking a .bat makes Windows open a console before a single line of it
+REM runs, so no batch file can start the program without one appearing. A shortcut
+REM can: it names pythonw.exe, which is the copy of Python built as a window
+REM program rather than a console one, and Explorer starts it directly. Nothing in
+REM between, which is also why it opens quicker than CLICK_TO_RUN.bat - none of the
+REM looking for Python that this script has already done is repeated at every start.
+REM
+REM It is built here, and not kept in the repository, because it holds the full path
+REM to this computer's Python and to this very folder, both of which are different on
+REM the next computer. Built again on every update, so upgrading Python mends it.
+REM
+REM CLICK_TO_RUN.bat is left exactly as it was. Nothing here can report a failure
+REM once the program is running, and that batch file, with its console, remains the
+REM way to see what went wrong
+:make_shortcut
+REM Windows hides the .lnk ending, so the label is what is actually seen in the folder
+set "SHORTCUT_LABEL=Driver Logs"
+set "SHORTCUT=%REPO%\%SHORTCUT_LABEL%.lnk"
+set "SHORTCUT_MADE="
+
+REM Clear out the one from last time first. Left in place, a shortcut still pointing
+REM at a Python that has since been upgraded away would pass the check below and be
+REM announced as freshly made, while doing nothing at all when double-clicked
+del /f /q "%SHORTCUT%" >nul 2>&1
+
+REM Ask Python only for the folder it lives in, and put the name of its windowless
+REM twin on the end here. Asking for the whole path would need quote characters in
+REM the Python, which would end the command early, exactly as find_python.bat avoids
+set "PYTHON_FOLDER="
+for /f "delims=" %%D in ('%PYTHON% -c "import os,sys;print(os.path.dirname(sys.executable))" 2^>nul') do set "PYTHON_FOLDER=%%D"
+
+if not defined PYTHON_FOLDER goto :no_shortcut
+set "PYTHONW_PATH=%PYTHON_FOLDER%\pythonw.exe"
+if not exist "%PYTHONW_PATH%" goto :no_shortcut
+
+REM Start in is not decoration: the program writes its files to the folder above and
+REM loads its templates from beside itself, so it has to begin in Resources, exactly
+REM as CLICK_TO_RUN.bat arranges with its cd
+powershell -NoProfile -Command "$s = (New-Object -ComObject WScript.Shell).CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%PYTHONW_PATH%'; $s.Arguments = 'tax.py'; $s.WorkingDirectory = '%REPO%\Resources'; $s.Description = 'Prospect LLC driver logs and invoices'; $s.Save()" >nul 2>&1
+
+if not exist "%SHORTCUT%" goto :no_shortcut
+set "SHORTCUT_MADE=1"
+echo    Made %SHORTCUT_LABEL%, which opens the program without a black window.
+goto :eof
+
+REM Not being able to make it costs nothing: CLICK_TO_RUN.bat still works, and is
+REM what the message at the end will go on pointing at
+:no_shortcut
+echo    Note: the shortcut could not be made on this computer.
+echo    Nothing is broken - carry on using CLICK_TO_RUN.bat.
+goto :eof
