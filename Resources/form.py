@@ -25,6 +25,15 @@ DATE_FORMAT = '%m/%d/%Y'
 FIELD_WIDTH = 62
 DATE_WIDTH = 12
 
+# The narrowest the form may open, in pixels. The widths above are counted in characters,
+# and a box turns those into pixels using the computer's own default interface font -
+# not the font named in ui_font, which is only what the text is drawn in. That default is
+# 13 point on a Mac and 9 on Windows, so the identical form comes out 636 pixels wide here
+# and markedly narrower there. This is the Mac width, which makes both open the same size.
+# It is a floor and not a fixed width: a computer whose font asks for more still gets it,
+# and the year sheet and project boxes, the two that stretch, take up the difference
+MIN_WINDOW_WIDTH = 640
+
 # What stands between the parts of the line describing a project. Those parts carry
 # spaces of their own now - "Customer: All Terrain" - so a wider gap on its own no longer
 # reads as the join between one part and the next. A typed "|" would, at this size, read
@@ -162,13 +171,18 @@ def _name_the_styles(style):
 # so one built in the ordinary way is seen three times before it settles: small in the
 # corner, then the size of its contents, then moved. It is hidden the moment it is made
 # instead, and shown here once, when both its size and its place are already settled
-def show_centered(window):
+def show_centered(window, min_width=0):
     window.update_idletasks()
-    width, height = window.winfo_reqwidth(), window.winfo_reqheight()
+    # A window held to a minimum width opens at that width rather than the narrower one
+    # its contents asked for, so that is the width to centre on
+    width = max(window.winfo_reqwidth(), min_width)
+    height = window.winfo_reqheight()
     x = (window.winfo_screenwidth() - width) // 2
     y = (window.winfo_screenheight() - height) // 3
     # Where it goes, but not how big it is. Asked for a size as well it would be held to
-    # that size, and the status window has to be free to grow when its bar appears
+    # that size for good: the status window could not grow when its bar appears, and the
+    # form could not grow when a message under the project box runs to a second line. A
+    # minimum width is the way to widen a window without also pinning its height
     window.geometry(f'+{max(x, 0)}+{max(y, 0)}')
     window.deiconify()
 
@@ -593,9 +607,10 @@ class ProjectForm:
         self.project_box.bind('<FocusOut>', lambda _e: self._project_lost_focus(), add='+')
 
         self.window.update_idletasks()
-        self.window.minsize(self.window.winfo_reqwidth(), self.window.winfo_reqheight())
+        self.window.minsize(max(self.window.winfo_reqwidth(), MIN_WINDOW_WIDTH),
+                            self.window.winfo_reqheight())
         self.project_box.focus_set()
-        show_centered(self.window)
+        show_centered(self.window, MIN_WINDOW_WIDTH)
         self.window.after(SOURCE_CHECK_MS, self._check_source)
 
     # ---- building ----------------------------------------------------------------

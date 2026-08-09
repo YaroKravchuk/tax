@@ -101,6 +101,12 @@ if errorlevel 1 (
 
 echo [Step 1 of 2] Downloading the newest version of the program...
 echo.
+
+REM Put .gitignore back in plain sight for as long as the pull takes. It is hidden
+REM again once the pull is done, and Windows can refuse to let a hidden file be
+REM overwritten, which would fail the pull for a reason nothing on screen explains
+attrib -h "%REPO%\.gitignore" >nul 2>&1
+
 git pull
 if errorlevel 1 (
     echo.
@@ -109,9 +115,20 @@ if errorlevel 1 (
     echo    This usually means a file in this folder was edited by hand,
     echo    or this computer is not on the internet.
     echo.
+    attrib +h "%REPO%\.gitignore" >nul 2>&1
     pause
     exit /b 1
 )
+
+REM ---- Keep the housekeeping file out of sight -------------------------------
+REM .gitignore is what stops the driver logs and invoices - customer names, site
+REM addresses and rates - from being uploaded to the public repository, so it has
+REM to stay. It is of no interest to anyone using the program though, and Windows,
+REM unlike a Mac, shows it in the folder like any other file. Hiding it puts it
+REM where Git already keeps its own .git folder: still there, just not in the way.
+REM This cannot go straight after the pull: attrib would replace the pull's own
+REM result code before the check above had the chance to read it
+attrib +h "%REPO%\.gitignore" >nul 2>&1
 
 echo.
 echo [Step 2 of 2] Installing everything the program needs...
