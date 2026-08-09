@@ -45,7 +45,7 @@ REM If the program folder did not come through, stop with something useful rathe
 REM than a puzzling complaint about Python. This is what the very first run after
 REM an older version of this script updated it can look like.
 :run_update
-if exist "%REPO%\find_python.bat" goto :folder_ok
+if exist "%REPO%\Resources\find_python.bat" goto :folder_ok
 echo.
 echo    PROBLEM: The program folder could not be found.
 echo.
@@ -64,7 +64,7 @@ echo ==================================================
 echo.
 
 REM ---- Find Python the same way CLICK_TO_RUN.bat does ----
-call "%REPO%\find_python.bat"
+call "%REPO%\Resources\find_python.bat"
 if defined PYTHON goto :python_ok
 
 if defined PYTHON_TOO_OLD echo    PROBLEM: This computer has Python %PYTHON_TOO_OLD%, but the program needs %PYTHON_MIN% or newer.

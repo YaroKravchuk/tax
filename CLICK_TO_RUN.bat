@@ -2,7 +2,7 @@
 setlocal
 title Prospect LLC - Driver Logs
 
-call "%~dp0find_python.bat"
+call "%~dp0Resources\find_python.bat"
 if defined PYTHON goto :python_ok
 
 echo.

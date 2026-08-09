@@ -18,7 +18,7 @@ Run it again any time to pick up the latest changes; no command prompt required.
 1. Install Python 3.10 or newer from python.org
 
 Python 3.10 is the floor because numpy needs it; pandas and Pillow need 3.9, openpyxl 3.8.
-Newer versions than that are always allowed. `find_python.bat` stops with a clear message
+Newer versions than that are always allowed. `Resources\find_python.bat` stops with a clear message
 if the only Python it finds is too old, and merely mentions it if one is newer than has
 been tried, since a working Python must never be locked out.
 
@@ -50,7 +50,7 @@ python tax.py
 ```
 You may need to use python3 instead of python
 
-Both `CLICK_TO_RUN.bat` and `CLICK_TO_UPDATE.bat` find Python through `find_python.bat`,
+Both `CLICK_TO_RUN.bat` and `CLICK_TO_UPDATE.bat` find Python through `Resources\find_python.bat`,
 which uses whichever version is installed. They will not stop working when Python is upgraded.
 
 2. In the GUI:
