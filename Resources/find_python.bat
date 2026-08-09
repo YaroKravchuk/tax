@@ -12,6 +12,8 @@ REM below away again before the script that called us could read them.
 REM
 REM Hands back:
 REM   PYTHON           how to start Python, empty if nothing suitable was found
+REM   PYTHONW          how to start it without a console window, empty if there is
+REM                    no such Python, or none of the same version as PYTHON
 REM   PYTHON_VERSION   the version being used, e.g. 3.13
 REM   PYTHON_TOO_OLD   version that was found but is below the minimum, if any
 REM   PYTHON_UNTESTED  version being used, when it is newer than has been tried
@@ -33,12 +35,36 @@ set "PYTHON_MIN=%PYTHON_MIN_MAJOR%.%PYTHON_MIN_MINOR%"
 set "PYTHON_MAX=%PYTHON_MAX_MAJOR%.%PYTHON_MAX_MINOR%"
 
 set "PYTHON="
+set "PYTHONW="
 set "PYTHON_VERSION="
 set "PYTHON_TOO_OLD="
 set "PYTHON_UNTESTED="
 
 REM Try each way of starting Python and keep the first that is new enough
 for %%C in (py python python3) do call :consider %%C
+if defined PYTHON call :consider_windowless
+goto :eof
+
+
+REM ---- Find the same Python again, in the form that opens no console ----------
+REM Every Python on Windows comes with a second copy of itself built to run without
+REM a console window: pyw beside py, pythonw beside python. CLICK_TO_RUN.bat uses it
+REM so the program is not left sitting in front of an empty black window.
+REM
+REM It has to be the same version as the one chosen above, or the program would be
+REM started by a Python that never had its packages installed - and, having no
+REM console, would fail without a word on screen. Anything not confirmed to match is
+REM handed back empty, which puts CLICK_TO_RUN.bat back on the ordinary Python
+:consider_windowless
+if /i "%PYTHON%"=="py" set "PYTHONW=pyw"
+if /i "%PYTHON%"=="python" set "PYTHONW=pythonw"
+if /i "%PYTHON%"=="python3" set "PYTHONW=pythonw"
+if not defined PYTHONW goto :eof
+
+REM Redirecting its output is what makes a windowless Python answer at all
+set "WINDOWLESS_VERSION="
+for /f "delims=" %%V in ('%PYTHONW% -c "import sys;print(str(sys.version_info[0])+chr(46)+str(sys.version_info[1]))" 2^>nul') do set "WINDOWLESS_VERSION=%%V"
+if not "%WINDOWLESS_VERSION%"=="%PYTHON_VERSION%" set "PYTHONW="
 goto :eof
 
 
