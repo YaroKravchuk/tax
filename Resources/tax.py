@@ -1,30 +1,10 @@
+from form import StatusWindow, collect_UI_input, report_error, report_finished
+from sheet_manager import SheetManager
+from pdf_exporter import export_to_pdf
+from utility import create_materials, open_output_folder
+import traceback
 import os
 import sys
-import traceback
-
-# A package that is not installed stops the program here, at the import, before any of
-# it has run. That used to be readable in the console CLICK_TO_RUN.bat kept open behind
-# the form; started without a console, as it now is, there is nowhere for it to appear
-# and the program would seem to do nothing at all. Reporting it the usual way is not
-# possible either - the window that reports errors is in the very module that failed to
-# load - so this asks Windows for a message box, which needs nothing but the standard
-# library. Anywhere that has no message boxes to offer still has its console
-try:
-    from form import StatusWindow, collect_UI_input, report_error, report_finished
-    from sheet_manager import SheetManager
-    from pdf_exporter import export_to_pdf
-    from utility import create_materials, open_output_folder
-except Exception as trouble:
-    could_not_start = (f'The program could not start.\n\n{trouble}\n\n'
-                       'Close this, then double-click CLICK_TO_UPDATE.bat to install '
-                       'what it needs, and try again.')
-    try:
-        import ctypes
-        ctypes.windll.user32.MessageBoxW(None, could_not_start,
-                                         'Prospect LLC - Driver Logs', 0x10)
-    except Exception:
-        print(could_not_start)
-    sys.exit(1)
 
 # Move the status window on every this many loads, so a long run keeps showing progress
 # without being repainted for every single row
