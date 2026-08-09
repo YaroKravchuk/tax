@@ -54,22 +54,21 @@ Both `CLICK_TO_RUN.bat` and `CLICK_TO_UPDATE.bat` find Python through `find_pyth
 which uses whichever version is installed. They will not stop working when Python is upgraded.
 
 2. In the GUI:
-    - Check the top of the form. It names the BookRecords file the numbers are being read
-      from, the folder it sits in, and when that file was last saved, both as a date and as
-      plain "11 minutes ago". If edits were just made and it still says days ago, the file
-      being edited is not the file the program is reading. Saving the records while the form
-      is open turns that line red, because the form is then working from older data
+    - Check the line at the top saying when the records were last saved. If edits were just
+      made and it still says hours ago, the file being edited is not the file the program is
+      reading. Saving the records while the form is open turns that line red, because the
+      form is then working from older data
     - Select the appropriate "Dump Trucking" year sheet
-    - Find the project. The box under Project ID searches as you type, and the list
-      underneath shows what matches, most recently worked first. Any part of the address
-      works, in any order: typing `delridge` or `86th seattle` is enough. Pick one with
-      the mouse, or with the arrow keys and Enter. The line under the list confirms the
-      customer, the number of loads and the dates, so the right project can be checked
-      before anything is made
+    - Find the project. Click the Project box and the most recently worked projects drop
+      down under it; typing narrows them, and they disappear again once one is picked. Any
+      part of the address works, in any order: typing `delridge` or `86th seattle` is
+      enough. Pick one with the mouse, or with the arrow keys and Enter, and Escape puts
+      the list away. The line underneath then confirms the customer, the number of loads
+      and the dates, so the right project can be checked before anything is made
     - Adjust the date range. It is filled in with everything the project has, so narrow
       it only when part of the job is wanted
     - Check "Taxable" if applicable
-    - Leave "Also Save as PDF" checked to get a PDF next to each Excel file
+    - Leave "Also save as PDF" ticked to get a PDF next to each Excel file
     - Click Submit. A small window then says what is happening, since building the files
       and making the PDFs takes a while
 
