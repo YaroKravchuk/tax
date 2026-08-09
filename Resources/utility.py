@@ -22,9 +22,12 @@ BLANK_PROJECT_IDS = {'', 'nan', 'nat', 'none'}
 # later by validate_data, once the data has been narrowed to one project
 PICKER_COLUMNS = ['PROJECT ID', 'DATE', 'CUSTOMER']
 
-# One project as the picker shows it. search_text is the ID folded to lower case once,
-# up front, so that filtering thousands of projects on every keystroke stays cheap
-Project = namedtuple('Project', 'id customer loads first_date last_date search_text')
+# One project as the picker shows it. Two folded-down copies of its text are kept, both
+# made once up front so that filtering thousands of projects on every keystroke stays
+# cheap. search_text is the ID by itself, which is what names one project exactly, and is
+# what the box holds once one has been picked. match_text is the ID and the customer
+# together, which is what the search reads, so a job can be found by whoever it was for
+Project = namedtuple('Project', 'id customer loads first_date last_date search_text match_text')
 
 # Everything a run needs to write its workbooks
 Materials = namedtuple('Materials', 'driver_log_wb driver_log_template invoice_wb invoice_sheet '
@@ -108,9 +111,13 @@ class BookRecords:
             last_date=('DATE', 'max'),
         ).sort_values('last_date', ascending=False, na_position='last')
 
-        return [Project(project_id, row.customer, int(row.loads), row.first_date, row.last_date,
-                        project_id.lower())
-                for project_id, row in summary.iterrows()]
+        projects = []
+        for project_id, row in summary.iterrows():
+            # A project with no customer recorded is still searchable by its address
+            searchable = project_id if pd.isna(row.customer) else f'{project_id} {row.customer}'
+            projects.append(Project(project_id, row.customer, int(row.loads), row.first_date,
+                                    row.last_date, project_id.lower(), searchable.lower()))
+        return projects
 
 
 # Function to narrow a year sheet down to one project inside a date range. The form and

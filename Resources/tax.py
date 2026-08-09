@@ -1,8 +1,7 @@
-from form import StatusWindow, collect_UI_input
+from form import StatusWindow, collect_UI_input, report_error, report_finished
 from sheet_manager import SheetManager
 from pdf_exporter import export_to_pdf
 from utility import create_materials, open_output_folder
-import FreeSimpleGUI as PySimpleGUI
 import traceback
 import os
 import sys
@@ -26,7 +25,7 @@ try:
 
     # From here on the form is gone and the work takes a while, so a status window
     # keeps saying what is happening
-    status = StatusWindow('Preparing the templates...')
+    status = StatusWindow('Preparing')
 
     # Create materials such as template sheets and new files
     materials = create_materials(user_input)
@@ -37,7 +36,7 @@ try:
     load_count = len(materials.data)
     for position, (index, row) in enumerate(materials.data.iterrows(), start=1):
         if position == 1 or position % PROGRESS_STEP == 0:
-            status.update(f'Adding load {position} of {load_count}...')
+            status.update('Adding loads', done=position, total=load_count)
         if user_input.should_create_invoice:
             sheet_manager.populate_invoice_sheet_row(row)
         if user_input.should_create_driver_logs:
@@ -47,7 +46,7 @@ try:
 
     # Format and save invoice sheet
     if user_input.should_create_invoice:
-        status.update('Saving the invoice...')
+        status.update('Saving invoice')
         sheet_manager.merge_date_cells()
         sheet_manager.merge_truck_cells()
         invoice_file = f'../INVOICE__{user_input.project_id}__{materials.min_date} - {materials.max_date}.xlsx'
@@ -56,7 +55,7 @@ try:
 
     # Save driver logs sheet
     if user_input.should_create_driver_logs:
-        status.update('Saving the driver logs...')
+        status.update('Saving driver logs')
         driver_log_file = (f'../DRIVER LOGS__{user_input.project_id}'
                            f'__{materials.min_date} - {materials.max_date}.xlsx')
         materials.driver_log_wb.save(driver_log_file)
@@ -68,16 +67,17 @@ try:
     if user_input.should_export_pdf:
         pdf_errors = []
         for number, saved_file in enumerate(saved_files, start=1):
-            status.update(f'Making PDF {number} of {len(saved_files)}...'
-                          '\nThis is the slow part, it can take a minute.')
+            # The bar counts the PDFs, so the slowest step is still the one that visibly
+            # moves. It only moves twice, but a stalled window is what this is here to avoid
+            status.update('Making PDFs', done=number - 1, total=len(saved_files))
             try:
                 created_files.append(export_to_pdf(saved_file))
             except Exception as pdf_error:
                 pdf_errors.append(f'{os.path.basename(saved_file)}\n{str(pdf_error)}')
         if pdf_errors:
             status.close()
-            PySimpleGUI.PopupError('The Excel files were created, but the PDF export failed:'
-                                   '\n\n' + '\n\n'.join(pdf_errors))
+            report_error('The Excel files were created, but the PDF export failed:'
+                         '\n\n' + '\n\n'.join(pdf_errors))
 
     status.close()
 
@@ -89,9 +89,8 @@ try:
     # Say what was made and where, so the files do not have to be hunted for
     output_folder = os.path.abspath('..')
     file_list = '\n'.join(os.path.basename(path) for path in created_files)
-    if PySimpleGUI.Popup(f'Finished! {len(created_files)} files created for {user_input.project_id}:',
-                         '', file_list, '', f'Saved in:  {output_folder}',
-                         title='Done', custom_text=('Open Folder', 'Close')) == 'Open Folder':
+    if report_finished(f'Finished! {len(created_files)} files created for {user_input.project_id}:'
+                       f'\n\n{file_list}\n\nSaved in:  {output_folder}'):
         open_output_folder(output_folder)
 
 except Exception as e:
@@ -104,10 +103,10 @@ except Exception as e:
     where = next((frame for frame in reversed(tb)
                   if os.path.dirname(os.path.abspath(frame.filename)) == CODE_FOLDER), None)
     if where is not None:
-        PySimpleGUI.PopupError(f"Error: {str(e)}\n\n\n\nFailed at this spot in the code: "
-                               f"\n\tFile: {os.path.basename(where.filename)} \n\tLine: {where.lineno}")
+        report_error(f"Error: {str(e)}\n\n\n\nFailed at this spot in the code: "
+                     f"\n\tFile: {os.path.basename(where.filename)} \n\tLine: {where.lineno}")
     else:
-        PySimpleGUI.PopupError(f"Error: {str(e)}")
+        report_error(f"Error: {str(e)}")
 
 finally:
     if status is not None:

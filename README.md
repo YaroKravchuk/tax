@@ -24,7 +24,7 @@ been tried, since a working Python must never be locked out.
 
 2. Install required packages:
 ```bash
-pip install pandas FreeSimpleGUI openpyxl Pillow numpy
+pip install pandas ttkbootstrap openpyxl Pillow numpy
 ```
 
 You may need to use pip3 instead of pip
@@ -60,17 +60,23 @@ which uses whichever version is installed. They will not stop working when Pytho
       form is then working from older data
     - Select the appropriate "Dump Trucking" year sheet
     - Find the project. Click the Project box and the most recently worked projects drop
-      down under it; typing narrows them, and they disappear again once one is picked. Any
-      part of the address works, in any order: typing `delridge` or `86th seattle` is
-      enough. Pick one with the mouse, or with the arrow keys and Enter, and Escape puts
-      the list away. The line underneath then confirms the customer, the number of loads
-      and the dates, so the right project can be checked before anything is made
+      down under it, each with its customer and load count beside it; typing narrows them,
+      and they disappear again once one is picked. Any part of the address or of the
+      customer works, in any order, and the two can be mixed: `delridge`, `86th seattle`,
+      `all terrain` or `terrain auburn` are all enough. Pick one with the mouse, or
+      with the arrow keys and Enter, and Escape puts the list away. The line underneath
+      then confirms the customer, the number of loads and the dates, so the right project
+      can be checked before anything is made
     - Adjust the date range. It is filled in with everything the project has, so narrow
-      it only when part of the job is wanted
-    - Check "Taxable" if applicable
-    - Leave "Also save as PDF" ticked to get a PDF next to each Excel file
-    - Click Submit. A small window then says what is happening, since building the files
-      and making the PDFs takes a while
+      it only when part of the job is wanted. Dates can be typed, or picked from the
+      calendar behind the button at the end of each box
+    - Under "Create", choose whether to make the driver logs, the invoice, or both
+    - Under "Options", check "Taxable" if applicable. It greys out when no invoice is
+      being made, since it describes the invoice and nothing else. Leave "Also save as
+      PDF" ticked to get a PDF next to each Excel file
+    - Click Generate. Anything that stops the run is said against the box it belongs to,
+      with that box outlined in red. A small window then says what is happening, and shows
+      how far along it is, since building the files and making the PDFs takes a while
 
 3. The program generates:
     - `DRIVER LOGS__[ProjectID]__[dates].xlsx` and the matching `.pdf`

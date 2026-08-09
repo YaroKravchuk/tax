@@ -117,7 +117,7 @@ echo.
 echo [Step 2 of 2] Installing everything the program needs...
 echo.
 %PYTHON% -m pip install --upgrade pip
-%PYTHON% -m pip install --upgrade pandas FreeSimpleGUI openpyxl Pillow numpy pywin32
+%PYTHON% -m pip install --upgrade pandas ttkbootstrap openpyxl Pillow numpy pywin32
 if errorlevel 1 (
     echo.
     echo    PROBLEM: Something could not be installed.
