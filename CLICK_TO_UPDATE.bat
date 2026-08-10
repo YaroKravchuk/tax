@@ -153,12 +153,19 @@ echo.
 echo ==================================================
 echo    All up to date!
 echo.
-echo    Close this window, then double-click
+echo    Now double-click
 if defined SHORTCUT_MADE echo    %SHORTCUT_LABEL% to make driver logs.
 if not defined SHORTCUT_MADE echo    Resources\CLICK_TO_RUN.bat to make driver logs.
 echo ==================================================
 echo.
-pause
+
+REM Nothing left to read but the line above, so this shuts itself rather than asking
+REM to be dismissed. Long enough to take in that it worked, and a key press cuts it
+REM short. Only this ending closes itself: every other way out of this script is
+REM something going wrong, and those all wait, because the window shutting is what
+REM would take the explanation with it
+echo    This window closes on its own in a moment.
+timeout /t 6 >nul
 exit /b
 
 
