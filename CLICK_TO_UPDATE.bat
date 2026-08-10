@@ -159,13 +159,10 @@ if not defined SHORTCUT_MADE echo    Resources\CLICK_TO_RUN.bat to make driver l
 echo ==================================================
 echo.
 
-REM Nothing left to read but the line above, so this shuts itself rather than asking
-REM to be dismissed. Long enough to take in that it worked, and a key press cuts it
-REM short. Only this ending closes itself: every other way out of this script is
-REM something going wrong, and those all wait, because the window shutting is what
-REM would take the explanation with it
-echo    This window closes on its own in a moment.
-timeout /t 6 >nul
+REM Nothing left to read once it has worked, so this shuts straight away rather than
+REM asking to be dismissed. Only this ending does. Every other way out of this script
+REM is something having gone wrong, and those all still wait, because the window
+REM shutting is exactly what would take the explanation away with it
 exit /b
 
 
