@@ -91,8 +91,8 @@ class BookRecords:
 
         return self._sheets[sheet_name]
 
-    # Function to list every project on a year sheet, most recently worked first, each
-    # with the customer, load count and dates that let the right one be recognised
+    # Function to list every project on a year sheet, the most hauled first, each with the
+    # customer, load count and dates that let the right one be recognised
     def projects(self, sheet_name):
         if sheet_name not in self._projects:
             self._projects[sheet_name] = self._build_project_list(sheet_name)
@@ -109,7 +109,7 @@ class BookRecords:
             loads=('PROJECT ID', 'size'),
             first_date=('DATE', 'min'),
             last_date=('DATE', 'max'),
-        ).sort_values('last_date', ascending=False, na_position='last')
+        )
 
         projects = []
         for project_id, row in summary.iterrows():
@@ -117,6 +117,12 @@ class BookRecords:
             searchable = project_id if pd.isna(row.customer) else f'{project_id} {row.customer}'
             projects.append(Project(project_id, row.customer, int(row.loads), row.first_date,
                                     row.last_date, project_id.lower(), searchable.lower()))
+
+        # The biggest jobs first, then addresses in alphabetical order so that the many
+        # projects sharing a load count keep a settled place in the list rather than
+        # shuffling about with whatever order the sheet happens to hold them in. The
+        # already folded-down address is sorted on, so case never decides the order
+        projects.sort(key=lambda project: (-project.loads, project.search_text))
         return projects
 
 

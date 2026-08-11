@@ -476,7 +476,7 @@ def describe_source(records):
 def matching_projects(projects, query):
     words = query.lower().split()
     if not words:
-        return list(projects)          # an empty box offers the most recent work
+        return list(projects)          # an empty box offers the biggest jobs first
     return [project for project in projects
             if all(word in project.match_text for word in words)]
 
