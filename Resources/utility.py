@@ -152,6 +152,23 @@ class BookRecords:
         return projects
 
 
+# Function to put a project's loads in the order the sheets are built from. A driver log
+# sheet is started whenever the date or the truck changes from the load before, so every
+# load for one truck on one day has to arrive in one run. A load recorded out of order -
+# a day's hauling typed in after the next day's had been - would otherwise open a second
+# sheet for a truck that already has one, splitting the day across two tickets that both
+# count their loads from one, while the invoice listed the same day twice.
+#
+# Dates and trucks keep the order the records introduce them in rather than being sorted
+# into an order of their own, so gathering the loads is all this does. Sorting on the
+# truck would reorder the tickets as well, and it would order them by their spelling:
+# "PR TR #11" comes before "PR TR #4" when the two are read as text
+def order_loads(data):
+    ordered = data.sort_values('DATE', kind='stable')
+    groups = ordered.groupby(['DATE', 'TRUCK ID#'], sort=False, dropna=False).ngroup()
+    return ordered.loc[groups.sort_values(kind='stable').index]
+
+
 # Function to lay the table of loads out again, in the columns LOAD_TABLE_COLUMNS names.
 # The template still carries a Time In and a Time Out column against every load, from
 # before the times were kept once for the whole day, and this is what takes them off it
@@ -198,7 +215,7 @@ def filter_loads(records, sheet_name, project_id, start_date, end_date):
         data = data[data['DATE'] >= start_date]
     if pd.notna(end_date):
         data = data[data['DATE'] <= end_date]
-    return data
+    return order_loads(data)
 
 
 # Function to open the folder holding the finished files, so they do not have to be hunted for
