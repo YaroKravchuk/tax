@@ -4,6 +4,7 @@ from openpyxl.cell.text import InlineFont
 import math
 import os
 import pandas as pd
+from copy import copy
 from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles.colors import BLUE
@@ -233,7 +234,7 @@ class SheetManager:
         self.set_cell_value(f"A{invoice_row}", row.get("DATE").date() if pd.notna(row.get("DATE")) else None)
         self.set_cell_value(f"B{invoice_row}", row.get("TRUCK ID#"))
         self.set_cell_rich_text(f"C{invoice_row}", row.get("SERVICE TYPE"), row.get("PRODUCT"))
-        self.set_cell_value(f"E{invoice_row}", row.get("LOAD QTY \n"))
+        self.set_load_unit(f"E{invoice_row}", row.get("LOAD QTY \n"))
         self.set_cell_value(f"F{invoice_row}", row.get("RATE PER LOAD"))
 
         if self.taxable and pd.notna(row.get("RATE PER LOAD")):
@@ -305,6 +306,21 @@ class SheetManager:
         self.set_cell_value(f"H{invoice_row}", f"=E{invoice_row}*F{invoice_row}")
 
         self.row_count = self.row_count + 1
+
+    # Function to write the unit of a load, in bold. Every line carries a unit of some
+    # kind - a load the quantity hauled, hours their count, a dump fee the loads it was
+    # charged over - and read down the column they all look alike, so which lines are
+    # loads and which hang under one has to be read off the description. Setting the
+    # load's own unit in bold says it in the column being read. It is the weight the
+    # load's description beside it is already written in, so nothing new is introduced.
+    #
+    # The weight is the only thing changed: the rest of the font is taken from whatever
+    # the template dressed the cell in, so the column keeps its face, size and colour
+    def set_load_unit(self, cell_reference, value):
+        self.set_cell_value(cell_reference, value)
+        bold = copy(self.invoice_sheet[cell_reference].font)
+        bold.b = True
+        self.invoice_sheet[cell_reference].font = bold
 
     def set_cell_value(self, cell_reference, value):
         try:
