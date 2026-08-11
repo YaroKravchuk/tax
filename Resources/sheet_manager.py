@@ -190,18 +190,19 @@ class SheetManager:
             # If data row contains a new truck or a new day, create a new sheet
             self.create_new_driver_log_sheet(row)
 
+        # The columns are the ones LOAD_TABLE_COLUMNS lays the table out in. A load is
+        # written with no time of its own: a truck's time in and out cover its whole day
+        # rather than any one load, and are kept once, in the Trucking boxes below
         driver_log_row = str(self.load_row_count + 9)
         self.driver_log_sheet['A' + driver_log_row] = row["HAULING FROM"]
         self.driver_log_sheet['B' + driver_log_row] = row["HAULING TO"]
         self.driver_log_sheet['E' + driver_log_row] = row["PRODUCT"]
-        self.driver_log_sheet['H' + driver_log_row] = row["LOAD QTY \n"]
-        if pd.notna(row["DUMP FEE RATE"]):
-            self.driver_log_sheet['K' + driver_log_row] = "X"
+        self.driver_log_sheet['I' + driver_log_row] = row["LOAD QTY \n"]
         if pd.notna(row["MATERIAL COST"]):
-            self.driver_log_sheet['J' + driver_log_row] = "X"
-        self.driver_log_sheet['L' + driver_log_row] = row["TIME IN"]
-        self.driver_log_sheet['N' + driver_log_row] = row["TIME OUT"]
-        self.driver_log_sheet['P' + driver_log_row] = row["STAND-BY TIME"]
+            self.driver_log_sheet['K' + driver_log_row] = "X"
+        if pd.notna(row["DUMP FEE RATE"]):
+            self.driver_log_sheet['L' + driver_log_row] = "X"
+        self.driver_log_sheet['O' + driver_log_row] = row["STAND-BY TIME"]
 
         if not pd.isnull(row["TIME IN"]):
             self.driver_log_sheet['M20'] = row["TIME IN"]

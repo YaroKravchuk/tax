@@ -3,6 +3,7 @@ import pandas as pd
 import platform
 import subprocess
 from collections import namedtuple
+from copy import copy
 from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.styles import Font
@@ -32,6 +33,31 @@ Project = namedtuple('Project', 'id customer loads first_date last_date search_t
 # Everything a run needs to write its workbooks
 Materials = namedtuple('Materials', 'driver_log_wb driver_log_template invoice_wb invoice_sheet '
                                     'data min_date max_date')
+
+# The driver log's table of loads: the row its headings sit on, and the last row a load
+# can be written to
+LOAD_TABLE_HEADING_ROW = 8
+LOAD_TABLE_LAST_ROW = 18
+
+# The columns that table is laid out in, as the heading, the first and last spreadsheet
+# column it covers, and the column its look is borrowed from. A truck's time in and out
+# are kept once for its whole day, in the Trucking boxes under the table, so the table
+# carries no time of its own and the width the two time columns held is shared out among
+# the columns that are left. Only the merges move, and only onto edges of columns the
+# template already has, so the table still ends where it did and every other block on the
+# sheet keeps the size and the place it was drawn with.
+#
+# populate_driver_log_sheet writes each load into the first column of the column it
+# belongs in, so these letters and the ones it uses have to say the same thing
+LOAD_TABLE_COLUMNS = (
+    ('Loaded From', 'A', 'A', None),
+    ('Delivered To', 'B', 'D', None),
+    ('Material', 'E', 'H', None),
+    ('Qty', 'I', 'J', 'H'),
+    ('Mat.$', 'K', 'K', None),
+    ('DumpFee', 'L', 'N', None),
+    ('SB Time', 'O', 'P', 'P'),
+)
 
 
 class BookRecords:
@@ -126,6 +152,43 @@ class BookRecords:
         return projects
 
 
+# Function to lay the table of loads out again, in the columns LOAD_TABLE_COLUMNS names.
+# The template still carries a Time In and a Time Out column against every load, from
+# before the times were kept once for the whole day, and this is what takes them off it
+def rebuild_load_table(sheet):
+    rows = range(LOAD_TABLE_HEADING_ROW, LOAD_TABLE_LAST_ROW + 1)
+
+    for row in rows:
+        for merged in [str(area) for area in sheet.merged_cells.ranges if area.min_row == row]:
+            sheet.unmerge_cells(merged)
+
+    # Two of the columns now begin at a cell the template only ever used as the middle of
+    # another one, which carries no border, fill or heading of its own, so each borrows
+    # the look of the column whose place it takes. That is done before anything is merged
+    # again: merging replaces the cells it swallows, and one of the columns being
+    # borrowed from is swallowed by the column in front of it
+    borrowed_looks = {}
+    for heading, first, last, borrow_from in LOAD_TABLE_COLUMNS:
+        if borrow_from is not None:
+            for row in rows:
+                borrowed_looks[first, row] = copy(sheet[f'{borrow_from}{row}']._style)
+
+    for heading, first, last, borrow_from in LOAD_TABLE_COLUMNS:
+        for row in rows:
+            cell = sheet[f'{first}{row}']
+            if borrow_from is not None:
+                cell._style = borrowed_looks[first, row]
+            # The DumpFee column starts where Time In used to, and its cells are still
+            # formatted as times. Nothing in the table holds a time any more
+            cell.number_format = 'General'
+            if first != last:
+                sheet.merge_cells(f'{first}{row}:{last}{row}')
+
+        # Merging clears the headings of the columns that have been swallowed, and the
+        # ones left standing are named again, since most of them have moved along
+        sheet[f'{first}{LOAD_TABLE_HEADING_ROW}'] = heading
+
+
 # Function to narrow a year sheet down to one project inside a date range. The form and
 # the generator both call this, so what the form promises is exactly what gets built
 def filter_loads(records, sheet_name, project_id, start_date, end_date):
@@ -155,7 +218,11 @@ def create_materials(choices):
     driver_log_template = driver_log_wb["2024 Version"]
     driver_log_template['B2'].font = Font(name='Calibri', color='FFFFFF', size=18, b=True)
 
-    bold_cells = "G1 K1 A6 F6 N6 A8 B8 E8 H8 J8 K8 L8 N8 P8 A16 A17 A18 A20 A21 F16 J16 J17 J18 J20 J21".split()
+    # Done before the headings are dressed below, so that the cells named there are the
+    # ones the table is actually headed with
+    rebuild_load_table(driver_log_template)
+
+    bold_cells = "G1 K1 A6 F6 N6 A8 B8 E8 I8 K8 L8 O8 A16 A17 A18 A20 A21 F16 J16 J17 J18 J20 J21".split()
     for cell in bold_cells:
         driver_log_template[cell].font = Font(name='Calibri', color='FFFFFF', size=11.5, b=True)
 
