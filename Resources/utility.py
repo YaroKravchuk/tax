@@ -78,7 +78,15 @@ class BookRecords:
             self.full_path = os.path.abspath(path)
             self.read_mtime = os.path.getmtime(path)
             self.last_saved = datetime.fromtimestamp(self.read_mtime)
-            self.sheet_names = pd.ExcelFile(path).sheet_names
+            # Closed the moment its sheet names have been read. Left to itself pandas
+            # holds the file open until the garbage collector happens to come round to
+            # it, which here meant holding it for as long as the form was up: Windows
+            # will not let Excel save over a file another program has open, and refuses
+            # the save as a sharing violation. Saving the records while the form is open
+            # is the very thing the line at the top of the form is there to report on,
+            # so it has to be something the records can survive
+            with pd.ExcelFile(path) as workbook:
+                self.sheet_names = workbook.sheet_names
         except FileNotFoundError:
             raise ValueError('The load records could not be found.'
                              f'\n\nThe program expected them here:\n{os.path.abspath(path)}')
